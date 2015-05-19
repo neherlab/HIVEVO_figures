@@ -1,0 +1,3 @@
+[submodule "hivevo"]
+	path = hivevo
+	url = https://github.com/neherlab/HIVEVO_access.git
