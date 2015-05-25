@@ -52,7 +52,6 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     sns.set_style('darkgrid')
     figpath = 'figures/'
     fs=16
-    fig_size = (4.5, 4.3)
 
     fig, axs = plt.subplots(2, 1,
                             sharex=True,
