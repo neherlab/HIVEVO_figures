@@ -70,8 +70,8 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     for item in ax.get_yticklabels():
         item.set_fontsize(fs)
     ax.set_ylabel('substitution rate [1/year]', fontsize=fs)
-    ax.legend(loc='upper left', ncol=3, fontsize=fs-3)
-    ax.set_ylim([2e-4, 6e-2])
+    ax.legend(loc='upper left', ncol=3, fontsize=fs)
+    ax.set_ylim([2e-4, 4e-2])
     ax.set_yscale('log')
 
     ax=axs[1]
@@ -85,7 +85,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     for item in ax.get_xticklabels():
         item.set_fontsize(fs)
 
-    plt.tight_layout(rect=(0.07, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
+    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
     if fig_filename is not None:
         for ext in figtypes:
             fig.savefig(fig_filename+ext)

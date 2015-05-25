@@ -65,7 +65,7 @@ def draw_genome(ax, annotations,rows=3, readingframe=True):
                       label=anno['name'])
         
         xt = anno['x1'] + 0.5 * anno['width']
-        yt = anno['y1'] + 0.1 * height + height*(anno['width']<500)
+        yt = anno['y1'] + 0.2 * height + height*(anno['width']<500)
 
         ax.add_patch(r)
         ax.text(xt, yt,
