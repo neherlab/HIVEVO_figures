@@ -1,8 +1,8 @@
 import numpy as np
 from itertools import izip
-from hivevo.patients import Patient
-from hivevo.samples import all_fragments
-from util import store_data, load_data
+from hivevo.hivevo.patients import Patient
+from hivevo.hivevo.samples import all_fragments
+from util import store_data, load_data, draw_genome
 import os
 from filenames import get_figure_folder
 
@@ -52,10 +52,13 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     sns.set_style('darkgrid')
     figpath = 'figures/'
     fs=16
-    fig_size = (5.5, 4.3)
+    fig_size = (4.5, 4.3)
 
-    fig = plt.figure(1,figsize=fig_size)
-    ax=plt.subplot(111)
+    fig, axs = plt.subplots(2, 1,
+                            sharex=True,
+                            figsize=(8, 8),
+                            gridspec_kw={'height_ratios':[8, 1]})
+    ax=axs[0]
     HXB2_masked = np.ma.array(data['rates'])
     HXB2_masked.mask = data['rates']<0
     for pi,pcode in enumerate(data['patients']):
@@ -64,13 +67,24 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
 
     ax.plot(np.arange(HXB2_masked.shape[1]), np.exp(np.log(HXB2_masked).mean(axis=0)), c='k', lw=3, label='average')
 
-    for item in ax.get_xticklabels() + ax.get_yticklabels():
+    for item in ax.get_yticklabels():
         item.set_fontsize(fs)
-    plt.xlabel('position [bp]', fontsize=fs)
-    plt.ylabel('substitution rate [1/year]', fontsize=fs)
-    plt.legend(loc='upper left', ncol=3, fontsize=fs-3)
-    plt.ylim([2e-4, 6e-2])
-    plt.yscale('log')
+    ax.set_ylabel('substitution rate [1/year]', fontsize=fs)
+    ax.legend(loc='upper left', ncol=3, fontsize=fs-3)
+    ax.set_ylim([2e-4, 6e-2])
+    ax.set_yscale('log')
+
+    ax=axs[1]
+    sns.set_style('white')
+    from hivevo.hivevo.HIVreference import HIVreference
+    refseq = HIVreference('HXB2')
+    draw_genome(ax,{name:refseq.annotation[name] 
+                for name in ["LTR5'",'gag','pol','vif','vpr', 'gp120','RRE','gp41','nef',"LTR3'"]})
+    ax.set_yticks([])
+    ax.set_xlabel('position [bp]', fontsize=fs)
+    for item in ax.get_xticklabels():
+        item.set_fontsize(fs)
+
     plt.tight_layout(rect=(0.07, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
     if fig_filename is not None:
         for ext in figtypes:

@@ -38,3 +38,38 @@ def load_data(fn):
     with open(fn, 'rb') as f:
         return pickle.load(f)
 
+def draw_genome(ax, annotations,rows=3, readingframe=True):
+    from matplotlib.patches import Rectangle
+    y1 ,height, pad = 0, 1, 0.2
+    fs=12
+    ax.set_ylim([-pad,rows*(height+pad)])
+    anno_elements = []
+    for name, feature in annotations.iteritems():
+        x = [feature.location.nofuzzy_start, feature.location.nofuzzy_end]
+        anno_elements.append({'name': name,
+                     'x1': x[0], 'x2': x[1], 'width': x[1] - x[0]})
+    anno_elements.sort(key = lambda x:x['x1'])
+    for ai, anno in enumerate(anno_elements):
+        if readingframe:
+            anno['y1'] = y1 + (height + pad) * (2 - (anno['x1'])%3)
+        else:
+            anno['y1'] = y1 + (height + pad) * (ai%rows)
+        anno['y2'] = anno['y1'] + height
+
+    for anno in anno_elements:
+        r = Rectangle((anno['x1'], anno['y1']),
+                      anno['width'],
+                      height,
+                      facecolor=[0.8] * 3,
+                      edgecolor='k',
+                      label=anno['name'])
+        
+        xt = anno['x1'] + 0.5 * anno['width']
+        yt = anno['y1'] + 0.1 * height + height*(anno['width']<500)
+
+        ax.add_patch(r)
+        ax.text(xt, yt,
+                anno['name'],
+                color='k', 
+                fontsize=fs,
+                ha='center')
