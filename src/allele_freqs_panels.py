@@ -13,7 +13,7 @@ from matplotlib import cm
 
 from hivevo.hivevo.patients import Patient
 from filenames import get_figure_folder
-from util import HIVEVO_colormap
+from util import HIVEVO_colormap, store_data, load_data
 
 
 
@@ -29,27 +29,15 @@ def compress_data(aft, times, pcode, region):
 
     return data
 
-
-def store_data(data, fn):
-    '''Store data to file for the plots'''
-    import cPickle as pickle
-    with open(fn, 'wb') as f:
-        pickle.dump(data, f, protocol=-1)
-
-
-def load_data(fn):
-    '''Load the data for the plots'''
-    import cPickle as pickle
-    with open(fn, 'rb') as f:
-        return pickle.load(f)
-
-
 def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
-    '''Plot the estimated fitness value, for all regions together'''
+    '''Plot the frequencies of alleles as trajectories and  
+       at 3 representative time points'''
     fig, axs = plt.subplots(2, 3, figsize=(7, 5))
     sns.set_style('darkgrid')
     fs = 18
     datum = data[0]
+
+    # make three panel plot with SNV frequencies at specific time points
     ind = np.arange(len(datum['times']))
     ind = [0, len(ind) // 2, ind[-1]]
 
@@ -58,12 +46,12 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
     cmap = HIVEVO_colormap(kind='alternative')
     x = np.arange(datum['aft'].shape[2])
     color = [[float(tmp) for tmp in cmap(p)] for p in np.linspace(0, 1, len(x))]
-    for ii, i in enumerate(ind):
+    for ii, i in enumerate(ind): # loop over times
         ax = axs[0][ii]
         time = datum['times'][i]
         af = datum['aft'][i]
 
-        af_min = []
+        af_min = [] # plot minor allele frequencies
         for pos, afpos in enumerate(af.T):
             afpos = afpos.copy()
             afpos[icons0[pos]] = 0
@@ -91,6 +79,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
     fig.text(0.035, 0.5, 'SNV frequency', ha='center', va='center', rotation='vertical',
              fontsize=fs)
 
+    # plot SNV trajectories
     ax = plt.subplot2grid((2, 3), (1, 0), colspan=3)
     tmonth = datum['times']/30.5
     for pos in xrange(datum['aft'].shape[2]):
@@ -133,6 +122,7 @@ if __name__ == '__main__':
     fn_data = fn_data + 'allele_freqs_panels.pickle'
 
     if not os.path.isfile(fn_data):
+        print("Regenerating plot data")
         pcode = 'p3'
         region = 'p17'
         cutoff = 0.01
@@ -146,6 +136,7 @@ if __name__ == '__main__':
         data = compress_data(aft, times, pcode, region)
         store_data(data, fn_data)
     else:
+        print("Loading data from file")
         data = load_data(fn_data)
         
     pcode = data[0]['pcode']

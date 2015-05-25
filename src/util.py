@@ -24,3 +24,17 @@ def HIVEVO_colormap(kind='website'):
     cmap = lambda x: [c for c in tmp(x)]
     return cmap
 
+
+def store_data(data, fn):
+    '''Store data to file for the plots'''
+    import cPickle as pickle
+    with open(fn, 'wb') as f:
+        pickle.dump(data, f, protocol=-1)
+
+
+def load_data(fn):
+    '''Load the data for the plots'''
+    import cPickle as pickle
+    with open(fn, 'rb') as f:
+        return pickle.load(f)
+
