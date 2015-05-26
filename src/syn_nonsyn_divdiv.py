@@ -50,6 +50,29 @@ def plot_divdiv(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         plt.ion()
         plt.show()
 
+    ########## sfs ##############
+    sfs=data['sfs']
+    fig_size = (4.5, 4.3)
+    fig = plt.figure(figsize=fig_size)
+    ax=plt.subplot(111)
+    colors = sns.color_palette(n_colors=2)
+    binc = binc = 0.5*(sfs['bins'][1:]+sfs['bins'][:-1])
+    ax.bar(binc-0.045, sfs['syn']/np.sum(sfs['syn']),width = 0.04, label='synonymous', color=colors[0])
+    ax.bar(binc, sfs['nonsyn']/np.sum(sfs['nonsyn']),width = 0.04, label='nonsynonymous', color=colors[1])
+    ax.set_yscale('log')
+    ax.set_xlabel('frequency',fontsize=fs)
+    ax.set_ylabel('fractions of SNVs',fontsize=fs)
+    ax.legend(loc=1, fontsize=fs)
+    ax.set_ylim([0.005,1.1])
+    for item in ax.get_yticklabels()+ax.get_xticklabels():
+        item.set_fontsize(fs)
+    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
+    if fig_filename is not None:
+        for ext in figtypes:
+            fig.savefig(fig_filename+'_sfs'+ext)
+    else:
+        plt.ion()
+        plt.show()
 
 if __name__=="__main__":
     import argparse
@@ -74,6 +97,12 @@ if __name__=="__main__":
         nonsyn_divergence = {reg:{p:[] for p in patients} for reg in regions}
         nonsyn_diversity = {reg:{p:[] for p in patients} for reg in regions}
         time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
+
+        nbins=10
+        sfs_tmin=1000
+        sfs = {'syn':np.zeros(nbins, dtype=float), 
+               'nonsyn':np.zeros(nbins, dtype='float'),
+               'bins':np.linspace(0.01,0.99,nbins+1)}
         time_binc = 0.5*(time_bins[1:]+time_bins[:-1])
         cov_min = 100
         for pi, pcode in enumerate(patients):
@@ -86,8 +115,7 @@ if __name__=="__main__":
                     for prot in regions[region]:
                         initial_indices = p.get_initial_indices(prot)
                         aft = p.get_allele_frequency_trajectories(prot, cov_min=cov_min)
-                        gaps = p.get_gaps_by_codon(aft, pad=2, threshold=0.05)
-                        aft[aft<0.002]=0
+                        gaps = p.get_gaps_by_codon(prot, pad=2, threshold=0.05)
                         syn_mask = p.get_syn_mutations(prot)
                         syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)
                         nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(p.get_constrained(prot)==False)*(gaps==False)
@@ -101,17 +129,32 @@ if __name__=="__main__":
                         nonsyn_diversity[region][pcode].extend([(t, diversity(af[:,nonsyn_pos])) 
                                                                for t,af in zip(p.dsi, aft)])
 
+                        syn_derived = syn_mask.copy()
+                        syn_derived[initial_indices, np.arange(syn_derived.shape[1])]=False
+                        for t,af in izip(p.dsi,aft):
+                            if t>sfs_tmin:
+                                y,x = np.histogram(af[syn_derived].flatten(), bins=sfs['bins'])
+                                sfs['syn']+=y
+                        nonsyn_derived = syn_mask<=1
+                        nonsyn_derived*=(p.get_constrained(prot)==False)*(gaps==False)
+                        nonsyn_derived[initial_indices, np.arange(syn_derived.shape[1])]=False
+                        for t,af in izip(p.dsi,aft):
+                            if t>sfs_tmin:
+                                y,x = np.histogram(af[nonsyn_derived], bins=sfs['bins'])
+                                sfs['nonsyn']+=y
+
+
         for tmp_data in [syn_divergence, syn_diversity, nonsyn_diversity, nonsyn_divergence]:
             for region in regions:
                 tmp = np.vstack([np.array(tmp_data[region][p]) for p in patients])
                 tmp_clean = tmp[-np.isnan(tmp[:,1]),:]
                 y,  x = np.histogram(tmp_clean[:,0],bins = time_bins, weights = tmp_clean[:,1])
                 yn, x = np.histogram(tmp_clean[:,0],bins = time_bins)
-                tmp_data[region] = {'avg':y/(1e-10+yn), 'bins':time_binc, 'raw':tmp_clean}
+                tmp_data[region] = {'avg':y/(1e-10+yn), 'bins':time_binc, 'raw':tmp_data[region]}
 
         data = {'syn_diversity':syn_diversity, 'syn_divergence':syn_divergence,
                 'nonsyn_diversity':nonsyn_diversity, 'nonsyn_divergence':nonsyn_divergence,
-                }
+                'sfs':sfs}
         store_data(data, fn_data)
     else:
         print("Loading data from file")
