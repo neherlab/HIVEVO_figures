@@ -2,7 +2,7 @@ import numpy as np
 from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
-from util import store_data, load_data, draw_genome
+from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
 import os
 from filenames import get_figure_folder
 
@@ -51,11 +51,11 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     plt.ion()
     sns.set_style('darkgrid')
     figpath = 'figures/'
-    fs=16
+    fs=fig_fontsize
 
     fig, axs = plt.subplots(2, 1,
                             sharex=True,
-                            figsize=(8, 8),
+                            figsize=(fig_width, 0.8*fig_width),
                             gridspec_kw={'height_ratios':[8, 1]})
     ax=axs[0]
     HXB2_masked = np.ma.array(data['rates'])
@@ -68,8 +68,8 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
 
     for item in ax.get_yticklabels():
         item.set_fontsize(fs)
-    ax.set_ylabel('substitution rate [1/year]', fontsize=fs)
-    ax.legend(loc='upper left', ncol=3, fontsize=fs)
+    ax.set_ylabel('divergence rate [1/site/year]', fontsize=fs)
+    ax.legend(loc='upper left', ncol=3, fontsize=fs-3 ,title='Patients')
     ax.set_ylim([2e-4, 4e-2])
     ax.set_yscale('log')
 
@@ -78,7 +78,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     from hivevo.hivevo.HIVreference import HIVreference
     refseq = HIVreference('HXB2')
     draw_genome(ax,{name:refseq.annotation[name] 
-                for name in ["LTR5'",'gag','pol','vif','vpr', 'gp120','RRE','gp41','nef',"LTR3'"]})
+                for name in ["LTR5'",'gag','pol','vif','vpr','vpu','gp120','RRE','gp41','nef',"LTR3'"]},fs=7)
     ax.set_yticks([])
     ax.set_xlabel('position [bp]', fontsize=fs)
     for item in ax.get_xticklabels():

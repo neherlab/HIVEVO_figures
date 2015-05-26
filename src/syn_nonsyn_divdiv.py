@@ -3,7 +3,7 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
 from hivevo.hivevo.af_tools import divergence, diversity
-from util import store_data, load_data, draw_genome
+from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
 import os
 from filenames import get_figure_folder
 
@@ -14,8 +14,8 @@ def plot_divdiv(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     plt.ion()
     sns.set_style('darkgrid')
     figpath = 'figures/'
-    fs=16
-    fig_size = (9, 4.3)
+    fs=fig_fontsize
+    fig_size = (4.0/3*fig_width, 0.66*fig_width)
 
     fig, axs = plt.subplots(1, 2, sharey=True,figsize=fig_size)
     ax=axs[0]
@@ -52,7 +52,7 @@ def plot_divdiv(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
 
     ########## sfs ##############
     sfs=data['sfs']
-    fig_size = (4.5, 4.3)
+    fig_size = (2.0/3*fig_width, 0.66*fig_width)
     fig = plt.figure(figsize=fig_size)
     ax=plt.subplot(111)
     colors = sns.color_palette(n_colors=2)

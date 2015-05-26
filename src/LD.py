@@ -6,7 +6,7 @@ from hivevo.hivevo.samples import all_fragments
 from hivevo.hivevo.af_tools import LD as LDfunc
 from hivwholeseq.filenames import root_data_folder
 from filenames import get_figure_folder
-from util import store_data, load_data
+from util import store_data, load_data, fig_width, fig_fontsize
 
 
 def control_LD(PCR='PCR1', fragment='F3', var_min = 0.2):
@@ -48,8 +48,8 @@ def plot_LD(data, fig_filename = None):
     plt.ion()
     sns.set_style('darkgrid')
     figpath = 'figures/'
-    fs=16
-    fig_size = (5.5, 4.3)
+    fs=fig_fontsize
+    fig_size = (fig_width, 0.8*fig_width)
 
     binc = data['binc']
 
@@ -68,7 +68,7 @@ def plot_LD(data, fig_filename = None):
             item.set_fontsize(fs)
         plt.ylabel(label,fontsize = fs)
         plt.xlabel("distance [bp]",fontsize = fs)
-        plt.legend(loc=(0.5,0.45), ncol=2, fontsize = fs-3, columnspacing=1)
+        plt.legend(loc=(0.5,0.45), ncol=2, fontsize = fs, columnspacing=1)
         plt.tight_layout(rect=(0, 0, 0.98, 1))
         if fig_filename is not None:
             for ext in ['.pdf','.svg', '.png']:

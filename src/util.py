@@ -7,6 +7,8 @@ content:    Generic utils for the paper figures.
 # Modules
 import numpy as np
 
+fig_width = 5  
+fig_fontsize = 12  
 
 # Functions
 def HIVEVO_colormap(kind='website'):
@@ -38,10 +40,9 @@ def load_data(fn):
     with open(fn, 'rb') as f:
         return pickle.load(f)
 
-def draw_genome(ax, annotations,rows=3, readingframe=True):
+def draw_genome(ax, annotations,rows=3, readingframe=True,fs=9):
     from matplotlib.patches import Rectangle
     y1 ,height, pad = 0, 1, 0.2
-    fs=12
     ax.set_ylim([-pad,rows*(height+pad)])
     anno_elements = []
     for name, feature in annotations.iteritems():
