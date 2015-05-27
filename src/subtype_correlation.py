@@ -102,7 +102,6 @@ differences between regions swamp differences within regions.
         patients = ['p2', 'p3','p5', 'p8', 'p9', 'p10','p11']
         regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
                    'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
-        time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
         cov_min = 1000
         af_threshold = 0.01
         hxb2 = HIVreference(refname='HXB2')
@@ -156,8 +155,9 @@ differences between regions swamp differences within regions.
                     # loop over times and calculate the correlation for each value
                     for t, af in izip(p.dsi,aft):
                         good_af = (~np.any(af.mask, axis=0)[patient_to_subtype[:,2]]) & good_ref
-                        tmp = {'S'+str(i+1):np.mean(af[:,Squant['ind']*good_af*good_ref].max(axis=0)\
-                                              <af[:,Squant['ind']*good_af*good_ref].sum(axis=0)-af_threshold)
+                        tmp_af = af[:,patient_to_subtype[:,2]]
+                        tmp = {'S'+str(i+1):np.mean(tmp_af[:,Squant['ind']*good_af*good_ref].max(axis=0)\
+                                              <tmp_af[:,Squant['ind']*good_af*good_ref].sum(axis=0)-af_threshold)
                                                 for i, Squant in entropy_quantiles.iteritems()}
                         tmp.update({'pcode':pcode,'region':region,'time':t})
                         diverse_fraction.append(tmp)
