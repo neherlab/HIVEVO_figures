@@ -7,6 +7,121 @@ from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
 import os
 from filenames import get_figure_folder
 
+
+def collect_data_richard(patients, regions, syn_degeneracy=2):
+    '''Collect data for divergence and diversity'''
+    syn_divergence, syn_diversity = {reg:[] for reg in regions}, {reg:[] for reg in regions}
+    nonsyn_divergence, nonsyn_diversity = {reg:[] for reg in regions}, {reg:[] for reg in regions}
+    time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
+    time_binc = 0.5*(time_bins[1:]+time_bins[:-1])
+    cov_min = 100
+    for pi, pcode in enumerate(patients):
+        try:
+            p = Patient.load(pcode)
+        except:
+            print "Can't load patient", pcode
+        # NOTE: this is not how else is used, it is only used with "finally"
+        else:
+            for region in regions:
+                for prot in regions[region]:
+                    initial_indices = p.get_initial_indices(prot)
+                    aft = p.get_allele_frequency_trajectories(prot, cov_min=cov_min)
+                    gaps = p.get_gaps_by_codon(aft)
+                    syn_mask = p.get_syn_mutations(prot).sum(axis=0)
+                    syn_pos = (syn_mask >= syn_degeneracy)* (gaps==False)
+                    # NOTE: syn_mask == 0 are substitutions, they make up most
+                    # of the nonsynonymous signal
+                    nonsyn_pos = (syn_mask <= 1)*(p.get_constrained(prot)==False)*(gaps==False)
+                    print pcode, prot, syn_pos.sum(), nonsyn_pos.sum()
+
+                    syn_divergence[region].extend([(t, divergence(af[:,syn_pos], 
+                                             initial_indices[syn_pos])) for t,af in zip(p.dsi, aft)])
+                    syn_diversity[region].extend([(t, diversity(af[:,syn_pos])) for t,af in zip(p.dsi, aft)])
+                    nonsyn_divergence[region].extend([(t, divergence(af[:,nonsyn_pos], 
+                                             initial_indices[nonsyn_pos])) for t,af in zip(p.dsi, aft)])
+                    nonsyn_diversity[region].extend([(t, diversity(af[:,nonsyn_pos])) for t,af in zip(p.dsi, aft)])
+
+    for tmp_data in [syn_divergence, syn_diversity, nonsyn_diversity, nonsyn_divergence]:
+        for region in regions:
+            tmp = np.array(tmp_data[region])
+            tmp_clean = tmp[-np.isnan(tmp[:,1]),:]
+            y,  x = np.histogram(tmp_clean[:,0],bins = time_bins, weights = tmp_clean[:,1])
+            yn, x = np.histogram(tmp_clean[:,0],bins = time_bins)
+            tmp_data[region] = {'avg':y/(1e-10+yn), 'bins':time_binc, 'raw':tmp_clean}
+
+    data = {'syn_diversity':syn_diversity, 'syn_divergence':syn_divergence,
+            'nonsyn_diversity':nonsyn_diversity, 'nonsyn_divergence':nonsyn_divergence,
+            }
+    return data
+
+
+def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
+    '''Collect data for divergence and diversity'''
+    import pandas as pd
+    from itertools import izip
+
+    # Collect into DataFrame
+    data = []
+    for pi, pcode in enumerate(patients):
+        p = Patient.load(pcode)
+        for region, prots in regions.iteritems():
+            for prot in prots:
+                aft = p.get_allele_frequency_trajectories(prot, cov_min=cov_min)
+                initial_indices = p.get_initial_indices(prot)
+                gaps = p.get_gaps_by_codon(aft)
+
+                # Classify syn/nonsyn POSITIONS
+                # NOTE: this is not fully correct because some positions (2-fold
+                # degenerate) are both syn and nonsyn, but it's close enough
+                syn_mask = p.get_syn_mutations(prot).sum(axis=0)
+                pos = {'syn': (syn_mask >= syn_degeneracy) & (-gaps),
+                       'nonsyn': (syn_mask <= 1) & (-p.get_constrained(prot)) & (-gaps),
+                      }
+                
+                print pcode, prot, pos['syn'].sum(), pos['nonsyn'].sum()
+
+                for t, af in izip(p.dsi, aft):
+                    for mutclass, ind in pos.iteritems():
+                        data.append({'pcode': pcode,
+                                     'time': t,
+                                     'region': region,
+                                     'protein': prot,
+                                     'nsites': ind.sum(),
+                                     'mutclass': mutclass,
+                                     'divergence': divergence(af[:, ind], initial_indices[ind]),
+                                     'diversity': diversity(af[:, ind]),
+                                    })
+
+    data = pd.DataFrame(data)
+    data['divergence'] = data['divergence'].astype(float)
+    data['diversity'] = data['diversity'].astype(float)
+
+    # Make time bins
+    time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
+    time_binc = 0.5 * (time_bins[1:] + time_bins[:-1])
+    from hivwholeseq.utils.pandas import add_binned_column
+    add_binned_column(data, 'tbin', 'time', bins=time_bins, clip=True)
+    data['tbinc'] = time_binc[data['tbin']]
+
+    # Average over patients
+    datap = (data
+             .loc[:, ['mutclass', 'tbinc', 'region', 'divergence', 'diversity']]
+             .groupby(['mutclass', 'region', 'tbinc'])
+             .mean())
+
+    # Put it into a data structure that the plot function understands
+    # NOTE: this is here for compatibility with Richard
+    dataf = {}
+    for mutclass in ['syn', 'nonsyn']:
+        for obs in ['diversity', 'divergence']:
+            datum = datap[obs].unstack('tbinc').loc[mutclass]
+            d = {name: {'bins': np.array(_.index), 'avg': np.array(_)}
+                 for name, _ in datum.iterrows()}
+            dataf[mutclass+'_'+obs] = d
+
+    return dataf
+
+
 def plot_divdiv(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ####### plotting ###########
     import seaborn as sns
@@ -43,9 +158,11 @@ def plot_divdiv(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ax.set_xticks([0,1000,2000,3000])
     ax.set_xlabel('EDI [days]', fontsize=fs)
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
+
     if fig_filename is not None:
         for ext in figtypes:
-            fig.savefig(fig_filename+ext)
+            #fig.savefig(fig_filename+ext)
+            pass
     else:
         plt.ion()
         plt.show()
@@ -92,69 +209,9 @@ if __name__=="__main__":
                     'accessory': ['vif', 'nef', 'vpr', 'vpu', 'tat', 'rev'],
                     'envelope': ['env'] #['gp41', 'gp120'],
                     }
-        syn_divergence = {reg:{p:[] for p in patients} for reg in regions} 
-        syn_diversity = {reg:{p:[] for p in patients} for reg in regions}
-        nonsyn_divergence = {reg:{p:[] for p in patients} for reg in regions}
-        nonsyn_diversity = {reg:{p:[] for p in patients} for reg in regions}
-        time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
-
-        nbins=10
-        sfs_tmin=1000
-        sfs = {'syn':np.zeros(nbins, dtype=float), 
-               'nonsyn':np.zeros(nbins, dtype='float'),
-               'bins':np.linspace(0.01,0.99,nbins+1)}
-        time_binc = 0.5*(time_bins[1:]+time_bins[:-1])
-        cov_min = 100
-        for pi, pcode in enumerate(patients):
-            try:
-                p = Patient.load(pcode)
-            except:
-                print "Can't load patient", pcode
-            else:
-                for region in regions:
-                    for prot in regions[region]:
-                        initial_indices = p.get_initial_indices(prot)
-                        aft = p.get_allele_frequency_trajectories(prot, cov_min=cov_min)
-                        gaps = p.get_gaps_by_codon(prot, pad=2, threshold=0.05)
-                        syn_mask = p.get_syn_mutations(prot)
-                        syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)
-                        nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(p.get_constrained(prot)==False)*(gaps==False)
-                        print pcode, prot, syn_pos.sum(), nonsyn_pos.sum()
-                        syn_divergence[region][pcode].extend([(t, divergence(af[:,syn_pos], 
-                                                 initial_indices[syn_pos])) for t,af in zip(p.dsi, aft)])
-                        syn_diversity[region][pcode].extend([(t, diversity(af[:,syn_pos])) 
-                                                            for t,af in zip(p.dsi, aft)])
-                        nonsyn_divergence[region][pcode].extend([(t, divergence(af[:,nonsyn_pos], 
-                                                 initial_indices[nonsyn_pos])) for t,af in zip(p.dsi, aft)])
-                        nonsyn_diversity[region][pcode].extend([(t, diversity(af[:,nonsyn_pos])) 
-                                                               for t,af in zip(p.dsi, aft)])
-
-                        syn_derived = syn_mask.copy()
-                        syn_derived[initial_indices, np.arange(syn_derived.shape[1])]=False
-                        for t,af in izip(p.dsi,aft):
-                            if t>sfs_tmin:
-                                y,x = np.histogram(af[syn_derived].flatten(), bins=sfs['bins'])
-                                sfs['syn']+=y
-                        nonsyn_derived = syn_mask<=1
-                        nonsyn_derived*=(p.get_constrained(prot)==False)*(gaps==False)
-                        nonsyn_derived[initial_indices, np.arange(syn_derived.shape[1])]=False
-                        for t,af in izip(p.dsi,aft):
-                            if t>sfs_tmin:
-                                y,x = np.histogram(af[nonsyn_derived], bins=sfs['bins'])
-                                sfs['nonsyn']+=y
-
-
-        for tmp_data in [syn_divergence, syn_diversity, nonsyn_diversity, nonsyn_divergence]:
-            for region in regions:
-                tmp = np.vstack([np.array(tmp_data[region][p]) for p in patients])
-                tmp_clean = tmp[-np.isnan(tmp[:,1]),:]
-                y,  x = np.histogram(tmp_clean[:,0],bins = time_bins, weights = tmp_clean[:,1])
-                yn, x = np.histogram(tmp_clean[:,0],bins = time_bins)
-                tmp_data[region] = {'avg':y/(1e-10+yn), 'bins':time_binc, 'raw':tmp_data[region]}
-
-        data = {'syn_diversity':syn_diversity, 'syn_divergence':syn_divergence,
-                'nonsyn_diversity':nonsyn_diversity, 'nonsyn_divergence':nonsyn_divergence,
-                'sfs':sfs}
+        # NOTE: these two give the same result, good
+        data = collect_data_fabio(patients, regions)
+        #data = collect_data_richard(patients, regions)
         store_data(data, fn_data)
     else:
         print("Loading data from file")
