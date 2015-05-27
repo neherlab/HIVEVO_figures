@@ -93,11 +93,6 @@ if __name__=="__main__":
     fn_data = foldername+'data/'
     fn_data = fn_data + 'subtype_correlation.pickle'
 
-    print(
-"""Note: this depends a little on which regions are used. 
-stratification is good within regions, but overall entropy 
-differences between regions swamp differences within regions.
-""")
     if not os.path.isfile(fn_data) or params.redo:
         patients = ['p2', 'p3','p5', 'p8', 'p9', 'p10','p11']
         regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
