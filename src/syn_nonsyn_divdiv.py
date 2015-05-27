@@ -264,15 +264,13 @@ if __name__=="__main__":
     if not os.path.isfile(fn_data) or params.redo:
         patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9', 'p10','p11']
         regions = {'structural':['gag'], #['p17', 'p24'],
-                   'enzymes':  ['pol'], #['PR', 'RT', 'p15', 'IN'],
-                   'accessory': ['vif', 'nef', 'vpr', 'vpu', 'tat', 'rev'],
-                   'envelope': ['env'] #['gp41', 'gp120'],
-                  }
-        
+                    'enzymes':  ['pol'], #['PR', 'RT', 'p15', 'IN'],
+                    'accessory': ['vif', 'nef', 'vpr', 'vpu', 'tat', 'rev'],
+                    'envelope': ['env'] #['gp41', 'gp120'],
+                    }
         # NOTE: these two give the same result, good
         data = collect_data_fabio(patients, regions)
         #data = collect_data_richard(patients, regions)
-
         store_data(data, fn_data)
     else:
         print("Loading data from file")
