@@ -26,6 +26,8 @@ def HIVEVO_colormap(kind='website'):
     cmap = lambda x: [c for c in tmp(x)]
     return cmap
 
+def add_binned_column(df, bins, to_bin):
+    df.loc[:,to_bin+'_bin'] = np.minimum(len(bins)-2, np.maximum(0,np.searchsorted(bins, df.loc[:,to_bin])-1))
 
 def store_data(data, fn):
     '''Store data to file for the plots'''

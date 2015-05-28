@@ -40,8 +40,8 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
                     np.sqrt(var_rho.get_group(pat)['rho']),
                     color = colors[pat], ls="none", markersize=8, marker='o', label=pat)
 
-    ax.legend(loc=2, title='Patients:', fontsize=fs-3, ncol=2, labelspacing=0.1, columnspacing=0.1)
-    ax.set_yticks([0,0.25,0.5, 0.75, 1.0])
+    ax.legend(loc=2, fontsize=fs-3, ncol=2, labelspacing=0.1, columnspacing=0.1)
+    ax.set_yticks([0,0.25,0.5, 0.75])
     ax.set_xticks([0,1000,2000,3000])
     ax.set_xlabel('EDI [days]', fontsize=fs)
     ax.set_ylabel("Spearman's r", fontsize=fs)
@@ -59,18 +59,17 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
         div.loc[:,ent] = div.loc[:,ent].astype(float)
         mean_div = div.loc[:,[ent, 'time_bin']].groupby(by=['time_bin'], as_index=False).mean()
         var_div = div.loc[:,[ent, 'time_bin']].groupby(by=['time_bin'], as_index=False).var()
-        print mean_div, np.sqrt(var_div)
         ax.errorbar(binc, mean_div.loc[:,ent] , np.sqrt(var_div.loc[:,ent]),
-                    label=str(i+1), c=colors[i])
+                    label='Q'+str(i+1), c=colors[i])
 
-    ax.set_ylim([0,0.4])
-    ax.set_yticks([0, 0.2, 0.4])
+    ax.set_ylim([0,0.3])
+    ax.set_yticks([0, 0.1, 0.2, 0.3])
     ax.set_xticks([0,1000,2000,3000])
     ax.set_ylabel('fraction>0.01')
     ax.set_xlabel('EDI [days]', fontsize=fs)
     for item in ax.get_xticklabels()+ax.get_yticklabels():
         item.set_fontsize(fs)
-    ax.legend(loc=2, ncol=2, title="Entropy Quartiles:", fontsize=fs-3,
+    ax.legend(loc=2, ncol=2,fontsize=fs-3,
               labelspacing=0.1, columnspacing=0.5)
 
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
@@ -96,8 +95,8 @@ if __name__=="__main__":
 
     if not os.path.isfile(fn_data) or params.redo:
         patients = ['p2', 'p3','p5', 'p8', 'p9', 'p10','p11']
-        regions = ['p24', 'p17', 'RT', 'PR', 'IN', 'vif', 'nef','vpu']
-        time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
+        regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
+                   'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000
         af_threshold = 0.01
         hxb2 = HIVreference(refname='HXB2')
@@ -119,7 +118,6 @@ if __name__=="__main__":
                     # get patient to subtype map and subset entropy vectors
                     patient_to_subtype = p.map_to_external_reference(region, refname = 'HXB2')
                     subtype_entropy = hxb2.get_entropy_in_patient_region(patient_to_subtype)
-                    entropy_quantiles = get_quantiles(4, subtype_entropy)
                     good_ref = good_pos_in_reference[patient_to_subtype[:,0]]
                     # loop over times and calculate the correlation for each value
                     for t, af in izip(p.dsi,aft):
@@ -132,11 +130,32 @@ if __name__=="__main__":
                                          'time':t,
                                          'rho':rho,
                                          'pval':pval})
-                            tmp = {'S'+str(i+1):np.mean(af[:,Squant['ind']*good_af*good_ref].max(axis=0)\
-                                                      <af[:,Squant['ind']*good_af*good_ref].sum(axis=0)-af_threshold)
-                                                        for i, Squant in entropy_quantiles.iteritems()}
-                            tmp.update({'pcode':pcode,'region':region,'time':t})
-                            diverse_fraction.append(tmp)
+        # determine genome wide fraction of alleles above a threshold
+        for pi, pcode in enumerate(patients):
+            try:
+                p = Patient.load(pcode)
+            except:
+                print "Can't load patient", pcode
+            else:
+                for region in regions:
+                    aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
+                    if len(aft.mask.shape)<2:
+                        aft.mask = np.zeros_like(aft, dtype=bool)
+
+                    # get patient to subtype map and subset entropy vectors
+                    patient_to_subtype = p.map_to_external_reference(region, refname = 'HXB2')
+                    subtype_entropy = hxb2.get_entropy_in_patient_region(patient_to_subtype)
+                    entropy_quantiles = get_quantiles(4, subtype_entropy)
+                    good_ref = good_pos_in_reference[patient_to_subtype[:,0]]
+                    # loop over times and calculate the correlation for each value
+                    for t, af in izip(p.dsi,aft):
+                        good_af = (~np.any(af.mask, axis=0)[patient_to_subtype[:,2]]) & good_ref
+                        tmp_af = af[:,patient_to_subtype[:,2]]
+                        tmp = {'S'+str(i+1):np.mean(tmp_af[:,Squant['ind']*good_af*good_ref].max(axis=0)\
+                                              <tmp_af[:,Squant['ind']*good_af*good_ref].sum(axis=0)-af_threshold)
+                                                for i, Squant in entropy_quantiles.iteritems()}
+                        tmp.update({'pcode':pcode,'region':region,'time':t})
+                        diverse_fraction.append(tmp)
 
         data={'correlations': pd.DataFrame(correlations),
               'diverse_fraction': pd.DataFrame(diverse_fraction),
