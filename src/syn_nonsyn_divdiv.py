@@ -216,7 +216,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
     if fig_filename is not None:
         for ext in figtypes:
-            #fig.savefig(fig_filename+ext)
+            fig.savefig(fig_filename+ext)
             pass
     else:
         plt.ion()
@@ -242,7 +242,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
     if fig_filename is not None:
         for ext in figtypes:
-            #fig.savefig(fig_filename+'_sfs'+ext)
+            fig.savefig(fig_filename+'_sfs'+ext)
             pass
     else:
         plt.ion()
