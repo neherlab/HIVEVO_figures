@@ -55,7 +55,7 @@ def collect_data_richard(patients, regions, syn_degeneracy=2):
                         if t>sfs_tmin:
                             y,x = np.histogram(af[syn_derived].flatten(), bins=sfs['bins'])
                             sfs['syn']+=y
-                    nonsyn_derived = syn_mask<=1
+                    nonsyn_derived = syn_mask==False
                     nonsyn_derived*=(p.get_constrained(prot)==False)*(gaps==False)
                     nonsyn_derived[initial_indices, np.arange(syn_derived.shape[1])]=False
                     for t,af in izip(p.dsi,aft):
