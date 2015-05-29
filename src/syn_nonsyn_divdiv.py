@@ -5,6 +5,7 @@ from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
 from hivevo.hivevo.af_tools import divergence, diversity
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
+from util import boot_strap_patients, replicate_func, add_binned_column
 import os
 from filenames import get_figure_folder
 
@@ -145,33 +146,7 @@ def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
     data = pd.DataFrame(data)
     data['divergence'] = data['divergence'].astype(float)
     data['diversity'] = data['diversity'].astype(float)
-
-    # Make time bins
-    time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 3000, 5000])
-    time_binc = 0.5 * (time_bins[1:] + time_bins[:-1])
-    from hivwholeseq.utils.pandas import add_binned_column
-    add_binned_column(data, 'tbin', 'time', bins=time_bins, clip=True)
-    data['tbinc'] = time_binc[data['tbin']]
-
-    # Average over patients
-    datap = (data
-             .loc[:, ['mutclass', 'tbinc', 'region', 'divergence', 'diversity']]
-             .groupby(['mutclass', 'region', 'tbinc'])
-             .mean())
-
-    # Put it into a data structure that the plot function understands
-    # NOTE: this is here for compatibility with Richard
-    dataf = {}
-    for mutclass in ['syn', 'nonsyn']:
-        for obs in ['diversity', 'divergence']:
-            datum = datap[obs].unstack('tbinc').loc[mutclass]
-            d = {name: {'bins': np.array(_.index), 'avg': np.array(_)}
-                 for name, _ in datum.iterrows()}
-            dataf[mutclass+'_'+obs] = d
-
-    dataf['sfs'] = sfs
-
-    return dataf
+    return {'divdiv':data, 'sfs':sfs}
 
 
 def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
@@ -185,33 +160,42 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     fig_size = (4.0/3*fig_width, 0.66*fig_width)
 
     fig, axs = plt.subplots(1, 2, sharey=True,figsize=fig_size)
-    ax=axs[0]
-    colors = {reg:c for reg, c in zip(data['syn_divergence'].keys(), 
+    divdiv = data['divdiv']
+    regions = divdiv.loc[:,'region'].unique().tolist()
+    time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 4000])
+    time_binc = 0.5*(time_bins[:-1]+time_bins[1:])
+    add_binned_column(divdiv, time_bins, 'time')
+    colors = {reg:c for reg, c in zip(regions, 
                                       sns.color_palette(n_colors=4))}
-    for region, d in data['nonsyn_divergence'].iteritems():
-        ax.plot(d['bins'], d['avg'], ls='-', c=colors[region], lw=3, label=region)
-    for region, d in data['nonsyn_diversity'].iteritems():
-        ax.plot(d['bins'], d['avg'], ls='--', c=colors[region], lw=3, label=None)
-    ax.legend(loc=2, fontsize=fs)
-    ax.set_xticks([0,1000,2000,3000])
-    for item in ax.get_yticklabels()+ax.get_xticklabels():
-        item.set_fontsize(fs)
-    ax.set_xlabel('EDI [days]', fontsize=fs)
-    ax.set_ylabel('divergence/diversity', fontsize=fs)
+    def get_time_bin_mean(df):
+        return df.loc[:,['time_bin', 'diversity', 'divergence']].groupby(by=['time_bin'], as_index=False).mean()
+    def label_func(mutclass, region, divordiv):
+        if divordiv=='divergence' and mutclass=='nonsyn':
+            return region
+        elif mutclass=='syn' and 'region'=='enzymes':
+            return divordiv
+        else:
+            return None
 
-    ax=axs[1]
-    for region, d in data['syn_divergence'].iteritems():
-        ax.plot(d['bins'], d['avg'], ls='-',c=colors[region], lw=3,
-                label=('divergence' if region=='enzymes' else None))
-    for region, d in data['syn_diversity'].iteritems():
-        ax.plot(d['bins'], d['avg'], ls='--',c=colors[region], lw=3,
-                label=('diversity' if region=='enzymes' else None))
+    for ax, mutclass in izip(axs, ['nonsyn', 'syn']):
+        for region in regions:
+            ind = (divdiv.loc[:,'region']==region) & (divdiv.loc[:,'mutclass']=='nonsyn')
+            tmp = divdiv.loc[ind,['time_bin', 'diversity', 'divergence', 'pcode']]
+            avg_divdiv = get_time_bin_mean(tmp)
+            bs = boot_strap_patients(tmp, eval_func = get_time_bin_mean)
+            ax.errorbar(time_binc, avg_divdiv.loc[:,'divergence'], replicate_func(bs, 'divergence', np.std, bin_index='time_bin'),
+                        ls='-', c=colors[region], lw=3, label=label_func(mutclass, region, 'divergence'))
+            ax.errorbar(time_binc, avg_divdiv.loc[:,'diversity'], replicate_func(bs, 'diversity', np.std, bin_index='time_bin'),
+                        ls='--', c=colors[region], lw=3, label=label_func(mutclass, region, 'diversity'))
 
-    ax.legend(loc=2, fontsize=fs)
-    for item in ax.get_yticklabels()+ax.get_xticklabels():
-        item.set_fontsize(fs)
-    ax.set_xticks([0,1000,2000,3000])
-    ax.set_xlabel('EDI [days]', fontsize=fs)
+        ax.legend(loc=2, fontsize=fs)
+        ax.set_xticks([0,1000,2000,3000])
+        ax.set_xlim([0,3100])
+        for item in ax.get_yticklabels()+ax.get_xticklabels():
+            item.set_fontsize(fs)
+        ax.set_xlabel('EDI [days]', fontsize=fs)
+        ax.set_ylabel('divergence/diversity', fontsize=fs)
+
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
 
     if fig_filename is not None:

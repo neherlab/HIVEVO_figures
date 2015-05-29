@@ -91,9 +91,11 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
                              columns=['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived', 'S_bin'])
 
     col = 'af_away_minor'
-    ax.errorbar(Sbinc, mean_to_away.loc[:,col], replicate_func(bs, col, np.std), label = 'equal subtype')
+    ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
+                replicate_func(bs, col, np.std, bin_index='S_bin'), label = 'equal subtype')
     col = 'af_to_minor'
-    ax.errorbar(Sbinc, mean_to_away.loc[:,col], replicate_func(bs, col, np.std), label = 'not equal subtype')
+    ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
+                replicate_func(bs, col, np.std, bin_index='S_bin'), label = 'not equal subtype')
     #ax.plot(Sbinc, mean_to_away.loc[mean_to_away.loc[:,'away']==True,'af_derived'] , label = 'away, der')
     #ax.plot(Sbinc, mean_to_away.loc[mean_to_away.loc[:,'away']==False,'af_derived'], label = 'to, der')
     ax.set_yscale('log')
@@ -114,8 +116,8 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         return df.loc[:,['divergence', 'reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
     rev_div = get_time_bin_means(to_away)
     bs = boot_strap_patients(to_away, get_time_bin_means, columns = ['reversion','divergence','time_bin'])
-    reversion_std = replicate_func(bs, 'reversion', np.std)
-    total_div_std = replicate_func(bs, 'divergence', np.std)
+    reversion_std = replicate_func(bs, 'reversion', np.std, bin_index='time_bin')
+    total_div_std = replicate_func(bs, 'divergence', np.std, bin_index='time_bin')
     fraction = rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence']
     print "Reversions:\n", rev_div.loc[:,'reversion']
     print "Divergence:\n", rev_div.loc[:,'divergence']

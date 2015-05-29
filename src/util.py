@@ -112,8 +112,15 @@ def boot_strap_patients(df, eval_func, columns=None,  n_bootstrap = 100):
         replicates.append(eval_func(bs))
     return replicates
 
-def replicate_func(reps, col, func):
-    tmp = np.ma.array([d.loc[:,col] for d in reps])
+def replicate_func(reps, col, func, bin_index=None):
+    if bin_index is not None:
+        nbins = np.max([np.max(d.loc[:,bin_index]) for d in reps])+1
+        tmp = np.ma.zeros((len(reps), nbins), dtype = 'float')
+        tmp.mask = True
+        for ri, rep in enumerate(reps):
+            tmp[ri, rep.loc[:,bin_index]] = rep.loc[:,col]
+    else:
+        tmp = np.ma.array([d.loc[:,col] for d in reps])
     try:
         tmp.mask = np.isnan(tmp) | np.isinf(tmp)
     except:
