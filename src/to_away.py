@@ -4,6 +4,7 @@ from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.af_tools import divergence
 from util import store_data, load_data, fig_width, fig_fontsize, add_binned_column
+from util import boot_strap_patients, replicate_func
 import os
 from filenames import get_figure_folder
 
@@ -83,11 +84,16 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     mv = data['minor_variants']
     mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']] = \
             mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']].astype(float)
-    mean_to_away = mv.groupby(by=['S_bin'], as_index=False).mean()
-    print mean_to_away
+    def get_Sbin_mean(df):
+        return df.groupby(by=['S_bin'], as_index=False).mean()
+    mean_to_away =get_Sbin_mean(mv)
+    bs = boot_strap_patients(mv, eval_func=get_Sbin_mean, 
+                             columns=['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived', 'S_bin'])
 
-    ax.plot(Sbinc, mean_to_away.loc[:,'af_away_minor']   , label = 'equal subtype')
-    ax.plot(Sbinc, mean_to_away.loc[:,'af_to_minor']  , label = 'not equal subtype')
+    col = 'af_away_minor'
+    ax.errorbar(Sbinc, mean_to_away.loc[:,col], replicate_func(bs, col, np.std), label = 'equal subtype')
+    col = 'af_to_minor'
+    ax.errorbar(Sbinc, mean_to_away.loc[:,col], replicate_func(bs, col, np.std), label = 'not equal subtype')
     #ax.plot(Sbinc, mean_to_away.loc[mean_to_away.loc[:,'away']==True,'af_derived'] , label = 'away, der')
     #ax.plot(Sbinc, mean_to_away.loc[mean_to_away.loc[:,'away']==False,'af_derived'], label = 'to, der')
     ax.set_yscale('log')
@@ -103,11 +109,19 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     add_binned_column(to_away, time_bins, 'time')
     to_away.loc[:,['reversion', 'divergence']] = \
             to_away.loc[:,['reversion', 'divergence']].astype(float)
-    reversion = to_away.loc[:,['reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
-    total_div = to_away.loc[:,['divergence','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
-    print "Reversions:\n", reversion
-    print "Divergence:\n", total_div
-    print "Fraction:\n", reversion.loc[:,'reversion']/total_div.loc[:,'divergence']
+
+    def get_time_bin_means(df):
+        return df.loc[:,['divergence', 'reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
+    rev_div = get_time_bin_means(to_away)
+    bs = boot_strap_patients(to_away, get_time_bin_means, columns = ['reversion','divergence','time_bin'])
+    reversion_std = replicate_func(bs, 'reversion', np.std)
+    total_div_std = replicate_func(bs, 'divergence', np.std)
+    print "Reversions:\n", rev_div.loc[:,'reversion']
+    print "Divergence:\n", rev_div.loc[:,'divergence']
+    print "Fraction:\n", rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence'], '+/-',\
+    np.sqrt(reversion_std**2/rev_div.loc[:,'divergence']**2
+        +rev_div.loc[:,'reversion']**2/rev_div.loc[:,'divergence']**4*total_div_std**2)
+    #print reversion_std,total_div_std
     print "Consensus!=Founder:",np.mean(data['consensus_distance'].values())
 
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)

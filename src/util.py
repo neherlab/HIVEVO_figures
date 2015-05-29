@@ -88,3 +88,29 @@ def draw_genome(ax, annotations,rows=3, readingframe=True,fs=9):
                 color='k', 
                 fontsize=fs,
                 ha='center')
+
+def boot_strap_patients(df, eval_func, columns=None,  n_bootstrap = 100):
+    import pandas as pd
+
+    if columns is None:
+        columns = df.columns
+    if 'pcode' not in columns:
+        columns = list(columns)+['pcode']
+
+    patients = df.loc[:,'pcode'].unique()
+    tmp_df_grouped = df.loc[:,columns].groupby('pcode')
+    npats = len(patients)
+    replicates = []
+    for i in xrange(n_bootstrap):
+        print("Bootstrap",i)
+        pats = patients[np.random.randint(0,npats, size=npats)]
+        bs = []
+        for pi,pat in enumerate(pats):
+            bs.append(tmp_df_grouped.get_group(pat))
+            bs[-1]['pcode']='BS'+str(pi+1)
+        bs = pd.concat(bs)
+        replicates.append(eval_func(bs))
+    return replicates
+
+def replicate_func(reps, col, func):
+    return func(np.array([d.loc[:,col] for d in reps]), axis=0)
