@@ -27,7 +27,19 @@ def HIVEVO_colormap(kind='website'):
     return cmap
 
 def add_binned_column(df, bins, to_bin):
+    # FIXME: this works, but is a little cryptic
     df.loc[:,to_bin+'_bin'] = np.minimum(len(bins)-2, np.maximum(0,np.searchsorted(bins, df.loc[:,to_bin])-1))
+
+def get_quantiles(q, arr):
+    '''
+    returns ranges and a boolean index map for each of the q quantiles of array arr 
+    as a dict, {i:{'range':(start, stop), 'ind':[True, False, ...]},...}
+    '''
+    from scipy.stats import scoreatpercentile
+    thresholds = [scoreatpercentile(arr, 100.0*i/q) for i in range(q+1)]
+    return {i: {'range':(thresholds[i],thresholds[i+1]), 
+                'ind':((arr>=thresholds[i])*(arr<thresholds[i+1]))}
+           for i in range(q)}
 
 def store_data(data, fn):
     '''Store data to file for the plots'''

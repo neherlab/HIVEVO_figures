@@ -3,16 +3,10 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.samples import all_fragments
-from util import store_data, load_data, fig_width, fig_fontsize
+from util import store_data, load_data, fig_width, fig_fontsize, get_quantiles
 import os
 from filenames import get_figure_folder
 
-def get_quantiles(q, arr):
-    from scipy.stats import scoreatpercentile
-    thresholds = [scoreatpercentile(arr, 100.0*i/q) for i in range(q+1)]
-    return {i: {'range':(thresholds[i],thresholds[i+1]), 
-                'ind':((arr>=thresholds[i])*(arr<thresholds[i+1]))}
-           for i in range(q)}
 
 def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01):
     '''
