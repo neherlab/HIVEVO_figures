@@ -113,4 +113,9 @@ def boot_strap_patients(df, eval_func, columns=None,  n_bootstrap = 100):
     return replicates
 
 def replicate_func(reps, col, func):
-    return func(np.array([d.loc[:,col] for d in reps]), axis=0)
+    tmp = np.ma.array([d.loc[:,col] for d in reps])
+    try:
+        tmp.mask = np.isnan(tmp) | np.isinf(tmp)
+    except:
+        print "trouble masking " #,tmp
+    return func(tmp, axis=0)

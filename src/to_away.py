@@ -116,11 +116,12 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     bs = boot_strap_patients(to_away, get_time_bin_means, columns = ['reversion','divergence','time_bin'])
     reversion_std = replicate_func(bs, 'reversion', np.std)
     total_div_std = replicate_func(bs, 'divergence', np.std)
+    fraction = rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence']
     print "Reversions:\n", rev_div.loc[:,'reversion']
     print "Divergence:\n", rev_div.loc[:,'divergence']
-    print "Fraction:\n", rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence'], '+/-',\
-    np.sqrt(reversion_std**2/rev_div.loc[:,'divergence']**2
-        +rev_div.loc[:,'reversion']**2/rev_div.loc[:,'divergence']**4*total_div_std**2)
+    print "Fraction:"
+    for frac, total, num_std, denom_std in zip(fraction, rev_div.loc[:,'divergence'],reversion_std, total_div_std):
+        print frac, '+/-', np.sqrt(num_std**2/total**2 + denom_std**2*frac**2/total**2)
     #print reversion_std,total_div_std
     print "Consensus!=Founder:",np.mean(data['consensus_distance'].values())
 
