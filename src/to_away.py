@@ -98,7 +98,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ax.legend(loc = 'lower right')
 
     to_away = data['to_away']
-    time_bins = np.array([0,200,500,1000,1500, 2500, 3500])
+    time_bins = np.array([0,500,1000,1500, 2500, 3500])
     binc = 0.5*(time_bins[1:]+time_bins[:-1])
     add_binned_column(to_away, time_bins, 'time')
     to_away.loc[:,['reversion', 'divergence']] = \
@@ -133,7 +133,8 @@ if __name__=="__main__":
     fn_data = fn_data + 'to_away.pickle'
     
     if not os.path.isfile(fn_data) or params.redo:
-        patients = ['p2', 'p3','p5','p8', 'p9', 'p10', 'p11']
+        #patients = ['p1', 'p6'] # other subtypes
+        patients = ['p2', 'p3','p5','p8', 'p9','p10', 'p11'] # subtype B
         regions = ['genomewide']
         #regions = ['gag', 'pol', 'env']
         #regions = ['p24', 'p17'] #, 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
