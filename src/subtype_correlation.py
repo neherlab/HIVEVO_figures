@@ -3,7 +3,7 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.samples import all_fragments
-from util import store_data, load_data, fig_width, fig_fontsize, get_quantiles
+from util import store_data, load_data, fig_width, fig_fontsize, get_quantiles, add_panel_label
 import os
 from filenames import get_figure_folder
 
@@ -96,6 +96,7 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     fig, axs = plt.subplots(1, 2, figsize=fig_size)
 
     ax=axs[0]
+    add_panel_label(ax, 'A', x_offset=-0.15)
     patients = sorted(data['correlations']['pcode'].unique(), key = lambda x:int(x[1:]))
     colors = {pat:c for pat, c in zip(patients, 
                                       sns.color_palette(n_colors=len(patients)))}
@@ -106,21 +107,22 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
 
     # loop over patients and plot the mean/std of the previously grouped data 
     for pat in patients:
-        ax.errorbar(mean_rho.get_group(pat)['time'],
+        ax.errorbar(mean_rho.get_group(pat)['time']/365.25,
                     mean_rho.get_group(pat)['rho'],
                     np.sqrt(var_rho.get_group(pat)['rho']),
                     color = colors[pat], ls="none", markersize=8, marker='o', label=pat)
 
     ax.legend(loc=2, fontsize=fs-3, ncol=2, labelspacing=0.1, columnspacing=0.1)
-    ax.set_yticks([0,0.25,0.5, 0.75])
-    ax.set_xticks([0,1000,2000,3000])
-    ax.set_xlabel('EDI [days]', fontsize=fs)
-    ax.set_ylabel("Spearman's r", fontsize=fs)
+    ax.set_yticks([0,0.25,0.5])
+    ax.set_xticks([0,2,4,6,8])
+    ax.set_xlabel('EDI [years]', fontsize=fs)
+    ax.set_title(r"Spearman's $\rho$", fontsize=fs)
     for item in ax.get_xticklabels()+ax.get_yticklabels():
         item.set_fontsize(fs)
 
     # add a second plot that shows the fraction of variable sites by entropy bin
     ax=axs[1]
+    add_panel_label(ax, 'B', x_offset=-0.15)
     div = data['diverse_fraction']
     colors = sns.color_palette(n_colors=4)
     # add a time bin column
@@ -133,17 +135,17 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
         # calculate mean and variance over regions and patients and samples within a time bin
         mean_div = div.loc[:,[ent, 'time_bin']].groupby(by=['time_bin'], as_index=False).mean()
         var_div = div.loc[:,[ent, 'time_bin']].groupby(by=['time_bin'], as_index=False).var()
-        ax.errorbar(binc, mean_div.loc[:,ent] , np.sqrt(var_div.loc[:,ent]),
+        ax.errorbar(binc/365.25, mean_div.loc[:,ent] , np.sqrt(var_div.loc[:,ent]),
                     label='Q'+str(i+1), c=colors[i])
 
-    ax.set_ylim([0,0.3])
+    ax.set_ylim([0,0.35])
     ax.set_yticks([0, 0.1, 0.2, 0.3])
-    ax.set_xticks([0,1000,2000,3000])
-    ax.set_ylabel('fraction>0.01')
-    ax.set_xlabel('EDI [days]', fontsize=fs)
+    ax.set_xticks([0,2,4,6,8])
+    ax.set_title('fraction of SNPs > 0.01')
+    ax.set_xlabel('EDI [years]', fontsize=fs)
     for item in ax.get_xticklabels()+ax.get_yticklabels():
         item.set_fontsize(fs)
-    ax.legend(loc=2, ncol=2,fontsize=fs-3,
+    ax.legend(loc=2, ncol=2,fontsize=fs-3, title='conservation',
               labelspacing=0.1, columnspacing=0.5)
 
     # plot output

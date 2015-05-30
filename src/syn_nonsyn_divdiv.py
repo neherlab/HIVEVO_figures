@@ -4,7 +4,7 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
 from hivevo.hivevo.af_tools import divergence, diversity
-from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
+from util import store_data, load_data, draw_genome, fig_width, fig_fontsize, add_panel_label
 from util import boot_strap_patients, replicate_func, add_binned_column
 import os
 from filenames import get_figure_folder
@@ -150,6 +150,7 @@ def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
 
 
 def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
+    n_bootstrap=100
     ####### plotting ###########
     import seaborn as sns
     from matplotlib import pyplot as plt
@@ -161,7 +162,8 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
     fig, axs = plt.subplots(1, 2, sharey=True,figsize=fig_size)
     divdiv = data['divdiv']
-    regions = divdiv.loc[:,'region'].unique().tolist()
+    #regions = divdiv.loc[:,'region'].unique().tolist()
+    regions = ['enzymes', 'structural', 'accessory', 'envelope']
     time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 4000])
     time_binc = 0.5*(time_bins[:-1]+time_bins[1:])
     add_binned_column(divdiv, time_bins, 'time')
@@ -170,31 +172,35 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     def get_time_bin_mean(df):
         return df.loc[:,['time_bin', 'diversity', 'divergence']].groupby(by=['time_bin'], as_index=False).mean()
     def label_func(mutclass, region, divordiv):
-        if divordiv=='divergence' and mutclass=='nonsyn':
+        if divordiv=='divergence' and mutclass=='syn':
             return region
-        elif mutclass=='syn' and 'region'=='enzymes':
+        elif mutclass=='nonsyn' and region=='enzymes':
             return divordiv
         else:
             return None
 
     for ax, mutclass in izip(axs, ['nonsyn', 'syn']):
+        if mutclass=='nonsyn': add_panel_label(ax, 'A', x_offset = -0.11)
         for region in regions:
-            ind = (divdiv.loc[:,'region']==region) & (divdiv.loc[:,'mutclass']=='nonsyn')
+            ind = (divdiv.loc[:,'region']==region) & (divdiv.loc[:,'mutclass']==mutclass)
             tmp = divdiv.loc[ind,['time_bin', 'diversity', 'divergence', 'pcode']]
             avg_divdiv = get_time_bin_mean(tmp)
-            bs = boot_strap_patients(tmp, eval_func = get_time_bin_mean)
-            ax.errorbar(time_binc, avg_divdiv.loc[:,'divergence'], replicate_func(bs, 'divergence', np.std, bin_index='time_bin'),
+            bs = boot_strap_patients(tmp, eval_func = get_time_bin_mean, n_bootstrap=n_bootstrap)
+            ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,'divergence'], replicate_func(bs, 'divergence', np.std, bin_index='time_bin'),
                         ls='-', c=colors[region], lw=3, label=label_func(mutclass, region, 'divergence'))
-            ax.errorbar(time_binc, avg_divdiv.loc[:,'diversity'], replicate_func(bs, 'diversity', np.std, bin_index='time_bin'),
+            ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,'diversity'], replicate_func(bs, 'diversity', np.std, bin_index='time_bin'),
                         ls='--', c=colors[region], lw=3, label=label_func(mutclass, region, 'diversity'))
 
-        ax.legend(loc=2, fontsize=fs)
-        ax.set_xticks([0,1000,2000,3000])
-        ax.set_xlim([0,3100])
+        ax.legend(loc=2, fontsize=fs, numpoints=2)
+        ax.set_xticks([0,2,4,6,8])
+        ax.set_yticks([0,.02,.04])
+        ax.set_ylim([0,.045])
+        ax.set_xlim([0,8.5])
         for item in ax.get_yticklabels()+ax.get_xticklabels():
             item.set_fontsize(fs)
-        ax.set_xlabel('EDI [days]', fontsize=fs)
-        ax.set_ylabel('divergence/diversity', fontsize=fs)
+        ax.set_xlabel('EDI [years]', fontsize=fs)
+        #if mutclass=='nonsyn':
+        #    ax.set_ylabel('divergence/diversity', fontsize=fs)
 
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
 
@@ -211,6 +217,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     fig_size = (2.0/3*fig_width, 0.66*fig_width)
     fig = plt.figure(figsize=fig_size)
     ax=plt.subplot(111)
+    add_panel_label(ax, 'B', x_offset = -0.2)
     colors = sns.color_palette(n_colors=2)
     binc = binc = 0.5*(sfs['bins'][1:]+sfs['bins'][:-1])
     ax.bar(binc-0.045, sfs['syn']/np.sum(sfs['syn']),width = 0.04, label='synonymous', color=colors[0])
@@ -219,7 +226,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     ax.set_xlabel('frequency',fontsize=fs)
     ax.set_ylabel('fractions of SNVs',fontsize=fs)
     ax.legend(loc=1, fontsize=fs)
-    ax.set_ylim([0.005,1.1])
+    ax.set_ylim([0.005,2.0])
     for item in ax.get_yticklabels()+ax.get_xticklabels():
         item.set_fontsize(fs)
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)

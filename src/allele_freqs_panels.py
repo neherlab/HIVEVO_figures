@@ -65,7 +65,10 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
         ax.set_xticks(range(0, len(x), 150))
         ax.set_yscale('log')
         ax.grid(True)
-        ax.set_title(str(int(time / 30.5))+' months', fontsize=fs)
+        if time>500:
+            ax.set_title(str(int(time / 365.25))+' years', fontsize=fs)
+        else:
+            ax.set_title(str(int(time / 30.5))+' months', fontsize=fs)
         for item in ax.get_xticklabels():
             item.set_fontsize(fs)
 
@@ -81,18 +84,19 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
 
     # plot SNV trajectories
     ax = plt.subplot2grid((2, 3), (1, 0), colspan=3)
-    tmonth = datum['times']/30.5
+    tday = datum['times']/365.25
     for pos in xrange(datum['aft'].shape[2]):
         for nuc in xrange(4):
             traj = datum['aft'][:,nuc,pos]
             traj[traj<0.003] = 0.003
             if (traj[0] < 0.5) and (traj.max() > 0.05):
-                ax.plot(tmonth, traj, c=color[pos])
+                ax.plot(tday, traj, c=color[pos])
 
     ax.set_ylim(1e-2, 1.35)
-    ax.set_xlim(0, tmonth[-1] + 1)
+    ax.set_xlim(0, tday[-1] + .1)
+    ax.set_xticks([0,2,4,6,8])
     ax.set_yscale('log')
-    ax.set_xlabel('Time since infection [months]', fontsize=fs)
+    ax.set_xlabel('EDI [years]', fontsize=fs)
     for item in ax.get_xticklabels() + ax.get_yticklabels():
         item.set_fontsize(fs)
 

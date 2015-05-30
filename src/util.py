@@ -10,6 +10,9 @@ import numpy as np
 fig_width = 5  
 fig_fontsize = 12  
 
+def add_panel_label(ax,label, x_offset=-0.1):
+    ax.text(x_offset, 0.95, label, transform=ax.transAxes, fontsize=fig_fontsize*1.5)
+
 # Functions
 def HIVEVO_colormap(kind='website'):
     from scipy.interpolate import interp1d

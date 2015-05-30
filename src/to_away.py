@@ -3,7 +3,7 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.af_tools import divergence
-from util import store_data, load_data, fig_width, fig_fontsize, add_binned_column
+from util import store_data, load_data, fig_width, fig_fontsize, add_panel_label ,add_binned_column
 from util import boot_strap_patients, replicate_func
 import os
 from filenames import get_figure_folder
@@ -90,20 +90,22 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     bs = boot_strap_patients(mv, eval_func=get_Sbin_mean, 
                              columns=['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived', 'S_bin'])
 
-    col = 'af_away_minor'
+    col = 'af_away_derived'
     ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
-                replicate_func(bs, col, np.std, bin_index='S_bin'), label = 'equal subtype')
-    col = 'af_to_minor'
+                replicate_func(bs, col, np.std, bin_index='S_bin'), 
+                lw = 3, label = 'founder = subtype consensus')
+    col = 'af_to_derived'
     ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
-                replicate_func(bs, col, np.std, bin_index='S_bin'), label = 'not equal subtype')
-    #ax.plot(Sbinc, mean_to_away.loc[mean_to_away.loc[:,'away']==True,'af_derived'] , label = 'away, der')
-    #ax.plot(Sbinc, mean_to_away.loc[mean_to_away.loc[:,'away']==False,'af_derived'], label = 'to, der')
+                replicate_func(bs, col, np.std, bin_index='S_bin'),
+                lw = 3, label = u'founder \u2260 subtype consensus')
     ax.set_yscale('log')
     ax.set_xscale('log')
-    ax.set_ylabel('minor SNV frequencies')
-    ax.set_xlabel('entropy [bits]')
+    ax.set_ylabel('divergence from founder sequence', fontsize = fig_fontsize)
+    ax.set_xlabel('entropy [bits]', fontsize = fig_fontsize)
+    for item in ax.get_yticklabels()+ax.get_xticklabels():
+        item.set_fontsize(fs)
     ax.set_xlim([0.005,2])
-    ax.legend(loc = 'lower right')
+    ax.legend(loc = 'lower right', fontsize = fig_fontsize)
 
     to_away = data['to_away']
     time_bins = np.array([0,500,1000,1500, 2500, 3500])
