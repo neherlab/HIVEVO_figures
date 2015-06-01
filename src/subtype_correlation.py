@@ -12,9 +12,6 @@ def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01):
     '''
     calculate the fraction of sites that are diverse for different quantiles of subtype entropy
     '''
-    hxb2 = HIVreference(refname='HXB2')
-    good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-
     diverse_fraction = []
     for pi, pcode in enumerate(patients):
         try:
@@ -22,6 +19,8 @@ def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01):
         except:
             print "Can't load patient", pcode
         else:
+            hxb2 = HIVreference(refname='HXB2', subtype = 'any' )  #p['Subtype'])
+            good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
             for region in regions:
                 aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
                 if len(aft.mask.shape)<2:
@@ -51,9 +50,6 @@ def collect_correlations(patients, regions, cov_min=1000):
     calculates the correlation of subtype entropy and intra-patient diversity for each 
     sample of the patients each of the regions provided
     '''
-    hxb2 = HIVreference(refname='HXB2')
-    good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-
     correlations = []
     for pi, pcode in enumerate(patients):
         try:
@@ -61,6 +57,8 @@ def collect_correlations(patients, regions, cov_min=1000):
         except:
             print "Can't load patient", pcode
         else:
+            hxb2 = HIVreference(refname='HXB2', subtype = 'any') #p['Subtype'])
+            good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
             for region in regions:
                 aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
                 if len(aft.mask.shape)<2:
@@ -171,7 +169,7 @@ if __name__=="__main__":
     fn_data = fn_data + 'subtype_correlation.pickle'
 
     if not os.path.isfile(fn_data) or params.redo:
-        patients = ['p2', 'p3','p5', 'p8', 'p9', 'p10','p11']
+        patients = ['p1', 'p2', 'p3','p5','p6', 'p8', 'p9', 'p10','p11']
         regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
                    'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000

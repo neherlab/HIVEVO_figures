@@ -8,9 +8,7 @@ from util import boot_strap_patients, replicate_func
 import os
 from filenames import get_figure_folder
 
-def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=1000):
-    hxb2 = HIVreference(refname='HXB2')
-    good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
+def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=1000, subtype = 'patient'):
     minor_variants = []
     to_away_divergence = []
     consensus_distance = {}
@@ -22,6 +20,12 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
         except:
             print "Can't load patient", pcode
         else:
+            if subtype == 'patient':
+                st = p['Subtype']
+            else:
+                st = subtype
+            hxb2 = HIVreference(refname='HXB2', subtype = st)
+            good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
             for region in regions:
                 aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
 
@@ -81,23 +85,24 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ax=axs
     Sbins = np.array([0,0.02, 0.08, 0.25, 2])
     Sbinc = 0.5*(Sbins[1:]+Sbins[:-1])
-    mv = data['minor_variants']
-    mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']] = \
-            mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']].astype(float)
     def get_Sbin_mean(df):
         return df.groupby(by=['S_bin'], as_index=False).mean()
-    mean_to_away =get_Sbin_mean(mv)
-    bs = boot_strap_patients(mv, eval_func=get_Sbin_mean, 
+    for lblstr, subtype in [('subtype', 'patient'), ('group M', 'any')]:
+        mv = data[subtype]['minor_variants']
+        mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']] = \
+            mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']].astype(float)
+        mean_to_away =get_Sbin_mean(mv)
+        bs = boot_strap_patients(mv, eval_func=get_Sbin_mean, 
                              columns=['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived', 'S_bin'])
 
-    col = 'af_away_derived'
-    ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
-                replicate_func(bs, col, np.std, bin_index='S_bin'), 
-                lw = 3, label = 'founder = subtype consensus')
-    col = 'af_to_derived'
-    ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
-                replicate_func(bs, col, np.std, bin_index='S_bin'),
-                lw = 3, label = u'founder \u2260 subtype consensus')
+        col = 'af_away_derived'
+        ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
+                    replicate_func(bs, col, np.std, bin_index='S_bin'), 
+                    lw = 3, label = 'founder = '+lblstr)
+        col = 'af_to_derived'
+        ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
+                    replicate_func(bs, col, np.std, bin_index='S_bin'),
+                    lw = 3, label = u'founder \u2260 '+lblstr)
     ax.set_yscale('log')
     ax.set_xscale('log')
     ax.set_ylabel('divergence from founder sequence', fontsize = fig_fontsize)
@@ -106,29 +111,6 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         item.set_fontsize(fs)
     ax.set_xlim([0.005,2])
     ax.legend(loc = 'lower right', fontsize = fig_fontsize)
-
-    to_away = data['to_away']
-    time_bins = np.array([0,500,1000,1500, 2500, 3500])
-    binc = 0.5*(time_bins[1:]+time_bins[:-1])
-    add_binned_column(to_away, time_bins, 'time')
-    to_away.loc[:,['reversion', 'divergence']] = \
-            to_away.loc[:,['reversion', 'divergence']].astype(float)
-
-    def get_time_bin_means(df):
-        return df.loc[:,['divergence', 'reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
-    rev_div = get_time_bin_means(to_away)
-    bs = boot_strap_patients(to_away, get_time_bin_means, columns = ['reversion','divergence','time_bin'])
-    reversion_std = replicate_func(bs, 'reversion', np.std, bin_index='time_bin')
-    total_div_std = replicate_func(bs, 'divergence', np.std, bin_index='time_bin')
-    fraction = rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence']
-    print "Reversions:\n", rev_div.loc[:,'reversion']
-    print "Divergence:\n", rev_div.loc[:,'divergence']
-    print "Fraction:"
-    for frac, total, num_std, denom_std in zip(fraction, rev_div.loc[:,'divergence'],reversion_std, total_div_std):
-        print frac, '+/-', np.sqrt(num_std**2/total**2 + denom_std**2*frac**2/total**2)
-    #print reversion_std,total_div_std
-    print "Consensus!=Founder:",np.mean(data['consensus_distance'].values())
-
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
     if fig_filename is not None:
         for ext in figtypes:
@@ -136,6 +118,31 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     else:
         plt.ion()
         plt.show()
+
+
+
+    def get_time_bin_means(df):
+        return df.loc[:,['divergence', 'reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
+    for subtype in ['patient', 'any']:
+        to_away = data[subtype]['to_away']
+        time_bins = np.array([0,500,1000,1500, 2500, 3500])
+        binc = 0.5*(time_bins[1:]+time_bins[:-1])
+        add_binned_column(to_away, time_bins, 'time')
+        to_away.loc[:,['reversion', 'divergence']] = \
+                to_away.loc[:,['reversion', 'divergence']].astype(float)
+        rev_div = get_time_bin_means(to_away)
+        bs = boot_strap_patients(to_away, get_time_bin_means, columns = ['reversion','divergence','time_bin'])
+        reversion_std = replicate_func(bs, 'reversion', np.std, bin_index='time_bin')
+        total_div_std = replicate_func(bs, 'divergence', np.std, bin_index='time_bin')
+        fraction = rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence']
+        print 'subtype'
+        print "Reversions:\n", rev_div.loc[:,'reversion']
+        print "Divergence:\n", rev_div.loc[:,'divergence']
+        print "Fraction:"
+        for frac, total, num_std, denom_std in zip(fraction, rev_div.loc[:,'divergence'],reversion_std, total_div_std):
+            print frac, '+/-', np.sqrt(num_std**2/total**2 + denom_std**2*frac**2/total**2)
+        #print reversion_std,total_div_std
+        print "Consensus!=Founder:",np.mean(data[subtype]['consensus_distance'].values())
 
 
 if __name__=="__main__":
@@ -153,20 +160,22 @@ if __name__=="__main__":
     
     if not os.path.isfile(fn_data) or params.redo:
         #patients = ['p1', 'p6'] # other subtypes
-        patients = ['p2', 'p3','p5','p8', 'p9','p10', 'p11'] # subtype B
+        patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9','p10', 'p11'] # subtype B
         regions = ['genomewide']
         #regions = ['gag', 'pol', 'env']
         #regions = ['p24', 'p17'] #, 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
         #           'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000
-        Sbins = np.array([0,0.02, 0.08, 0.25, 2])
+        Sbins = np.array([0,0.03, 0.08, 0.25, 2])
         Sbinc = 0.5*(Sbins[1:]+Sbins[:-1])
 
-        minor_variants, to_away_divergence, consensus_distance = \
-            collect_to_away(patients, regions, Sbins=Sbins, cov_min=cov_min)
+        data = {}
+        for subtype in ['patient', 'any']:
+            minor_variants, to_away_divergence, consensus_distance = \
+                collect_to_away(patients, regions, Sbins=Sbins, cov_min=cov_min, subtype = subtype)
 
-        data = {'minor_variants':minor_variants, 'to_away':to_away_divergence, 
-                'consensus_distance':consensus_distance, 'Sbins':Sbins, 'Sbinc':Sbinc}
+            data[subtype] = {'minor_variants':minor_variants, 'to_away':to_away_divergence, 
+                    'consensus_distance':consensus_distance, 'Sbins':Sbins, 'Sbinc':Sbinc}
         store_data(data, fn_data)
     else:
         print("Loading data from file")
