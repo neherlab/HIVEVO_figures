@@ -11,6 +11,7 @@ from filenames import get_figure_folder
 def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=1000, subtype = 'patient'):
     minor_variants = []
     to_away_divergence = []
+    to_away_minor = []
     consensus_distance = {}
 
     # determine genome wide fraction of alleles above a threshold
@@ -69,7 +70,15 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
                                         'reversion':np.mean(clean_reversion), 
                                         'divergence':np.mean(clean_total_divergence)})
 
-    return pd.DataFrame(minor_variants), pd.DataFrame(to_away_divergence), consensus_distance
+                    af_thres = [0,0.05,0.1, 0.25, 0.5, 0.95, 1.0]
+                    rev_tmp = clean_af[clean_consensus,np.arange(clean_consensus.shape[0])][~clean_away]
+                    der_tmp = clean_derived[~clean_away] 
+                    for ai,(af_lower, af_upper) in enumerate(zip(af_thres[:-1], af_thres[1:])):
+                        to_away_minor.append({'pcode':pcode,'region':region,'time':t,'af_bin':ai,
+                                        'reversion_spectrum':np.mean(rev_tmp*(rev_tmp>=af_lower)*(rev_tmp<af_upper)),
+                                        'minor_reversion_spectrum':np.mean(der_tmp*(der_tmp>=af_lower)*(der_tmp<af_upper))})
+
+    return pd.DataFrame(minor_variants), pd.DataFrame(to_away_divergence),pd.DataFrame(to_away_minor), consensus_distance
 
 def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ####### plotting ###########
@@ -89,12 +98,16 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         return df.groupby(by=['S_bin'], as_index=False).mean()
     for lblstr, subtype in [('subtype', 'patient'), ('group M', 'any')]:
         mv = data[subtype]['minor_variants']
+        # subset to a specific time interval
+        mv = mv.loc[(mv.loc[:,'time']>1500)&(mv.loc[:,'time']<2500),:]
+        print "average time:", mv.loc[:,'time'].mean()/365
         mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']] = \
             mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']].astype(float)
         mean_to_away =get_Sbin_mean(mv)
         bs = boot_strap_patients(mv, eval_func=get_Sbin_mean, 
                              columns=['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived', 'S_bin'])
 
+        print mean_to_away
         col = 'af_away_derived'
         ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
                     replicate_func(bs, col, np.std, bin_index='S_bin'), 
@@ -160,9 +173,9 @@ if __name__=="__main__":
     
     if not os.path.isfile(fn_data) or params.redo:
         #patients = ['p1', 'p6'] # other subtypes
-        patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9','p10', 'p11'] # subtype B
+        patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9','p10', 'p11'] # all subtypes
         regions = ['genomewide']
-        #regions = ['gag', 'pol', 'env']
+        #regions = ['gag', 'pol', 'nef'] #, 'env']
         #regions = ['p24', 'p17'] #, 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
         #           'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000
@@ -171,15 +184,22 @@ if __name__=="__main__":
 
         data = {}
         for subtype in ['patient', 'any']:
-            minor_variants, to_away_divergence, consensus_distance = \
+            minor_variants, to_away_divergence, to_away_minor, consensus_distance = \
                 collect_to_away(patients, regions, Sbins=Sbins, cov_min=cov_min, subtype = subtype)
 
-            data[subtype] = {'minor_variants':minor_variants, 'to_away':to_away_divergence, 
+            to_away_minor.loc[:,['reversion_spectrum', 'minor_reversion_spectrum']] = \
+                            to_away_minor.loc[:,['reversion_spectrum', 'minor_reversion_spectrum']].astype(float)
+            add_binned_column(to_away_minor,  [0,1000,2000,4000], 'time')
+            data[subtype] = {'minor_variants':minor_variants, 'to_away':to_away_divergence,'to_away_minor':to_away_minor, 
                     'consensus_distance':consensus_distance, 'Sbins':Sbins, 'Sbinc':Sbinc}
+
         store_data(data, fn_data)
     else:
         print("Loading data from file")
         data = load_data(fn_data)
 
 plot_to_away(data, fig_filename=foldername+'to_away')
+for subtype in ['patient', 'any']:
+    print data[subtype]['to_away_minor'].groupby(['time_bin', 'af_bin']).mean()
+
 #

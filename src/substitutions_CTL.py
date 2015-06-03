@@ -166,9 +166,9 @@ def correlate_epitope_substitution(ds, dctl):
     from hivwholeseq.reference import load_custom_reference
     from hivwholeseq.utils.sequence import find_annotation
     ref = load_custom_reference('HXB2', 'gb')
-    start_env = find_annotation(ref, 'gp120').location.nofuzzy_start
-    end_env = find_annotation(ref, 'gp41').location.nofuzzy_end
-    #dg = dg.loc[(dg['pos'] < start_env) | (dg['pos'] >= end_env)]
+    start_env = find_annotation(ref, 'gp41').location.nofuzzy_start 
+    end_env = find_annotation(ref, 'gp41').location.nofuzzy_end - 450
+    dg = dg.loc[(dg['pos'] < start_env) | (dg['pos'] >= end_env)]
 
     M = dg.groupby(['epitope', 'substitution']).size().unstack()
     Ma = np.array(M)
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     if not os.path.isfile(fn_data) or params.redo:
         patients = ['p1', 'p2', 'p3', 'p5', 'p6', 'p8', 'p9', 'p10', 'p11']
         # FIXME: add more regions
-        regions = ['gag', 'pol', 'gp120', 'gp41', 'vif', 'vpu', 'vpr', 'nef']
+        regions = ['gag', 'pol', 'gp120_noVloops', 'gp41', 'vif', 'vpu', 'vpr', 'nef']
 
         ds = collect_substitution_data(patients, regions)
 
