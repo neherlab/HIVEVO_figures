@@ -68,7 +68,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
 
     for item in ax.get_yticklabels():
         item.set_fontsize(fs)
-    ax.set_ylabel('divergence rate [1/site/year]', fontsize=fs)
+    ax.set_ylabel('Divergence rate [1/site/year]', fontsize=fs)
     ax.legend(loc='upper left', ncol=3, fontsize=fs-3 ,title='Patients')
     ax.set_ylim([2e-4, 4e-2])
     ax.set_yscale('log')
@@ -80,7 +80,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     draw_genome(ax,{name:refseq.annotation[name] 
                 for name in ["LTR5'",'gag','pol','vif','vpr','vpu','gp120','RRE','gp41','nef',"LTR3'"]},fs=7)
     ax.set_yticks([])
-    ax.set_xlabel('position [bp]', fontsize=fs)
+    ax.set_xlabel('Position [bp]', fontsize=fs)
     for item in ax.get_xticklabels():
         item.set_fontsize(fs)
 

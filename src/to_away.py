@@ -118,8 +118,8 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
                     lw = 3, label = u'founder \u2260 '+lblstr)
     ax.set_yscale('log')
     ax.set_xscale('log')
-    ax.set_ylabel('divergence from founder sequence', fontsize = fig_fontsize)
-    ax.set_xlabel('entropy [bits]', fontsize = fig_fontsize)
+    ax.set_ylabel('Divergence from founder sequence', fontsize = fig_fontsize)
+    ax.set_xlabel('Variability [bits]', fontsize = fig_fontsize)
     for item in ax.get_yticklabels()+ax.get_xticklabels():
         item.set_fontsize(fs)
     ax.set_xlim([0.005,2])
@@ -148,7 +148,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         reversion_std = replicate_func(bs, 'reversion', np.std, bin_index='time_bin')
         total_div_std = replicate_func(bs, 'divergence', np.std, bin_index='time_bin')
         fraction = rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence']
-        print 'subtype'
+        print "Comparison:", subtype
         print "Reversions:\n", rev_div.loc[:,'reversion']
         print "Divergence:\n", rev_div.loc[:,'divergence']
         print "Fraction:"

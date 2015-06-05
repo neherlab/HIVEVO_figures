@@ -105,7 +105,8 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     add_panel_label(ax, 'A', x_offset=-0.15)
     patients = sorted(data['correlations']['pcode'].unique(), key = lambda x:int(x[1:]))
     colors = {pat:c for pat, c in zip(patients, 
-                                      sns.color_palette(n_colors=len(patients)))}
+              sns.color_palette(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99',
+                                '#e31a1c','#fdbf6f','#ff7f00','#cab2d6'], n_colors = len(patients)))}
 
     # calculate mean and variance across regions for each time point and patient
     mean_rho = data['correlations'].groupby(by=['time', 'pcode'], as_index=False).mean().groupby('pcode')
@@ -148,11 +149,11 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     ax.set_ylim([0,0.35])
     ax.set_yticks([0, 0.1, 0.2, 0.3])
     ax.set_xticks([0,2,4,6,8])
-    ax.set_title('fraction of SNPs > 0.01')
+    ax.set_title('Fraction of SNPs > 0.01')
     ax.set_xlabel('ETI [years]', fontsize=fs)
     for item in ax.get_xticklabels()+ax.get_yticklabels():
         item.set_fontsize(fs)
-    ax.legend(loc=2, ncol=2,fontsize=fs-3, title='conservation',
+    ax.legend(loc=2, ncol=2,fontsize=fs-3, title='Conservation',
               labelspacing=0.1, columnspacing=0.5)
 
     # plot output

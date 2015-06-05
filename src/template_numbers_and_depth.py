@@ -18,7 +18,7 @@ if __name__=="__main__":
     fig1 = plt.figure(1, figsize=(fig_width, 0.8*fig_width))
     ax1 = plt.subplot(111)
     add_panel_label(ax1, 'A', x_offset=-0.15)
-    fig1 = plt.figure(2, figsize=(fig_width, 0.8*fig_width))
+    fig2 = plt.figure(2, figsize=(fig_width, 0.8*fig_width))
     ax2 = plt.subplot(111)
     add_panel_label(ax2, 'B', x_offset=-0.15)
     pat_colors = sns.color_palette(n_colors=len(patients))
@@ -62,7 +62,7 @@ if __name__=="__main__":
         #print val[good_vals,:]
         print "dilution overlap, fragment",str(f+1), spearmanr(val[:,0], val[:,1])
     tmp = np.vstack(overlap_dilution_list.values())
-    print "dilution overla, all fragments", spearmanr(tmp[:,0], tmp[:,1])
+    print "dilution overlap, all fragments", spearmanr(tmp[:,0], tmp[:,1])
 
     plt.figure(1)
     plt.plot([1,1e5], [1,1e5], lw=3, c='grey')
@@ -72,8 +72,8 @@ if __name__=="__main__":
     plt.xlim(1,1e5)
     for item in ax1.get_xticklabels() + ax1.get_yticklabels():
         item.set_fontsize(fs)
-    plt.ylabel('dilutions', fontsize=fs)
-    plt.xlabel('viral load', fontsize=fs)
+    plt.ylabel('Estimate from dilution', fontsize=fs)
+    plt.xlabel('Estimate from viral load', fontsize=fs)
     plt.legend(loc=2, fontsize=fs*0.75, ncol=2)
     plt.tight_layout(rect=(0, 0, 0.98, 1))
     for fmt in ['pdf', 'svg', 'png']:
@@ -88,8 +88,8 @@ if __name__=="__main__":
     plt.xlim(1,1e5)
     for item in ax2.get_xticklabels() + ax2.get_yticklabels():
         item.set_fontsize(fs)
-    plt.xlabel('dilutions', fontsize=fs)
-    plt.ylabel('overlap', fontsize=fs)
+    plt.xlabel('Estimate from dilutions', fontsize=fs)
+    plt.ylabel('Estimate from overlaps', fontsize=fs)
     plt.legend(loc=2, fontsize=fs*0.75, ncol=2)
     plt.tight_layout(rect=(0, 0, 0.98, 1))
     for fmt in ['pdf', 'svg', 'png']:
