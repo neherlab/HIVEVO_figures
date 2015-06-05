@@ -29,12 +29,16 @@ def compress_data(aft, times, pcode, region):
 
     return data
 
-def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
+
+def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
+                             figtypes=['.png', '.svg', '.pdf']):
     '''Plot the frequencies of alleles as trajectories and  
        at 3 representative time points'''
     fig, axs = plt.subplots(2, 3, figsize=(7, 5))
     sns.set_style('darkgrid')
     fs = 18
+    cmap = HIVEVO_colormap(kind='alternative')
+
     datum = data[0]
 
     # make three panel plot with SNV frequencies at specific time points
@@ -43,7 +47,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
 
     icons0 = datum['aft'][0].argmax(axis=0)
 
-    cmap = HIVEVO_colormap(kind='alternative')
+    # SNP frequencies in panels
     x = np.arange(datum['aft'].shape[2])
     color = [[float(tmp) for tmp in cmap(p)] for p in np.linspace(0, 1, len(x))]
     for ii, i in enumerate(ind): # loop over times
@@ -51,7 +55,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
         time = datum['times'][i]
         af = datum['aft'][i]
 
-        af_min = [] # plot minor allele frequencies
+        af_min = []
         for pos, afpos in enumerate(af.T):
             afpos = afpos.copy()
             afpos[icons0[pos]] = 0
@@ -61,7 +65,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
         ax.scatter(x, af_min, s=100, c=color, edgecolor='none')
         
         ax.set_ylim(1e-2, 1.35)
-        ax.set_xlim(-5, len(x) + 5)
+        ax.set_xlim(-5, len(x) + 20)
         ax.set_xticks(range(0, len(x), 150))
         ax.set_yscale('log')
         ax.grid(True)
@@ -69,20 +73,19 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
             ax.set_title(str(int(time / 365.25))+' years', fontsize=fs)
         else:
             ax.set_title(str(int(time / 30.5))+' months', fontsize=fs)
-        for item in ax.get_xticklabels():
-            item.set_fontsize(fs)
+        ax.xaxis.set_tick_params(labelsize=fs)
 
         if ii == 0:
-            for item in ax.get_yticklabels():
-                item.set_fontsize(fs)
+            ax.yaxis.set_tick_params(labelsize=fs)
         else:
             ax.set_yticklabels([])
 
     axs[0][1].set_xlabel('Position [bp]', fontsize=fs, labelpad=5)
-    fig.text(0.035, 0.5, 'SNV frequency', ha='center', va='center', rotation='vertical',
+    fig.text(0.035, 0.5, 'SNP frequency', ha='center', va='center',
+             rotation='vertical',
              fontsize=fs)
 
-    # plot SNV trajectories
+    # SNP trajectories
     ax = plt.subplot2grid((2, 3), (1, 0), colspan=3)
     tday = datum['times']/365.25
     for pos in xrange(datum['aft'].shape[2]):
@@ -97,17 +100,15 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
     ax.set_xticks([0,2,4,6,8])
     ax.set_yscale('log')
     ax.set_xlabel('EDI [years]', fontsize=fs)
-    for item in ax.get_xticklabels() + ax.get_yticklabels():
-        item.set_fontsize(fs)
+    ax.xaxis.set_tick_params(labelsize=fs)
+    ax.yaxis.set_tick_params(labelsize=fs)
 
+    # Final touches
     plt.tight_layout(rect=(0.07, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
-    if savefig:
-        fig_filename = savefig
-        fig_folder = os.path.dirname(fig_filename)
-
-        fig.savefig(fig_filename)
+    if fig_filename is not None:
+        for ext in figtypes:
+            fig.savefig(fig_filename+ext)
         plt.close(fig)
-
     else:
         plt.ion()
         plt.show()
@@ -146,10 +147,6 @@ if __name__ == '__main__':
     pcode = data[0]['pcode']
     region = data[0]['region']
     filename = foldername+'_'.join(['allele_freq_example', pcode, region])
-    for ext in ['png', 'pdf', 'svg']:
-        plot_allele_freq_example(data,
-                                    VERBOSE=VERBOSE,
-                                    savefig=filename+'.'+ext)
-
     plot_allele_freq_example(data,
-                             VERBOSE=VERBOSE)
+                             VERBOSE=VERBOSE,
+                             fig_filename=filename)
