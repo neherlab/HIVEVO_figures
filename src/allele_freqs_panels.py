@@ -79,7 +79,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
             ax.set_yticklabels([])
 
     axs[0][1].set_xlabel('Position [bp]', fontsize=fs, labelpad=5)
-    fig.text(0.035, 0.5, 'SNV frequency', ha='center', va='center', rotation='vertical',
+    fig.text(0.035, 0.5, 'SNP frequency', ha='center', va='center', rotation='vertical',
              fontsize=fs)
 
     # plot SNV trajectories
@@ -96,7 +96,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
     ax.set_xlim(0, tday[-1] + .1)
     ax.set_xticks([0,2,4,6,8])
     ax.set_yscale('log')
-    ax.set_xlabel('EDI [years]', fontsize=fs)
+    ax.set_xlabel('ETI [years]', fontsize=fs)
     for item in ax.get_xticklabels() + ax.get_yticklabels():
         item.set_fontsize(fs)
 
