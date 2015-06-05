@@ -65,7 +65,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
         ax.set_xticks(range(0, len(x), 150))
         ax.set_yscale('log')
         ax.grid(True)
-        if time>500:
+        if time>500: # label first time point as month, later ones as years
             ax.set_title(str(int(time / 365.25))+' years', fontsize=fs)
         else:
             ax.set_title(str(int(time / 30.5))+' months', fontsize=fs)
@@ -82,18 +82,18 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, savefig=False):
     fig.text(0.035, 0.5, 'SNP frequency', ha='center', va='center', rotation='vertical',
              fontsize=fs)
 
-    # plot SNV trajectories
+    # plot SNp trajectories
     ax = plt.subplot2grid((2, 3), (1, 0), colspan=3)
-    tday = datum['times']/365.25
+    tyears = datum['times']/365.25
     for pos in xrange(datum['aft'].shape[2]):
         for nuc in xrange(4):
             traj = datum['aft'][:,nuc,pos]
             traj[traj<0.003] = 0.003
             if (traj[0] < 0.5) and (traj.max() > 0.05):
-                ax.plot(tday, traj, c=color[pos])
+                ax.plot(tyears, traj, c=color[pos])
 
     ax.set_ylim(1e-2, 1.35)
-    ax.set_xlim(0, tday[-1] + .1)
+    ax.set_xlim(0, tyears[-1] + .1)
     ax.set_xticks([0,2,4,6,8])
     ax.set_yscale('log')
     ax.set_xlabel('ETI [years]', fontsize=fs)

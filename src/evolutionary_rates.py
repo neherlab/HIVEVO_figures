@@ -14,6 +14,7 @@ def running_average_masked(obs, ws):
     '''
     try:
         tmp_vals = np.convolve(np.ones(ws, dtype=float), obs*(1-obs.mask), mode='same')
+         # if the array is not masked, edges needs to be explictly fixed due to smaller counts
         if len(obs.mask.shape)==0:
             tmp_valid = ws*np.ones_like(tmp_vals)
             # fix the edges. using mode='same' assumes zeros outside the range
@@ -24,7 +25,7 @@ def running_average_masked(obs, ws):
             else:
                 tmp_vals[:ws//2]*=float(ws)/np.arange(ws//2+1,ws)
                 tmp_vals[-ws//2:]*=float(ws)/np.arange(ws,ws//2,-1.0)
-        else:
+        else: # if the array is masked, then we get the normalizer from counting the unmasked values
             tmp_valid = np.convolve(np.ones(ws, dtype=float), (1-obs.mask), mode='same')
 
         run_avg = np.ma.array(tmp_vals/tmp_valid)
@@ -57,6 +58,8 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
                             sharex=True,
                             figsize=(fig_width, 0.8*fig_width),
                             gridspec_kw={'height_ratios':[8, 1]})
+
+    # plot the divergence rates for each of the patients
     ax=axs[0]
     HXB2_masked = np.ma.array(data['rates'])
     HXB2_masked.mask = data['rates']<0
@@ -64,6 +67,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
         ax.plot(np.arange(HXB2_masked.shape[1])[-HXB2_masked.mask[pi]], 
                  HXB2_masked[pi][-HXB2_masked.mask[pi]], alpha = 0.5, label = pcode)
 
+    # plot the geometric mean of the patients
     ax.plot(np.arange(HXB2_masked.shape[1]), np.exp(np.log(HXB2_masked).mean(axis=0)), c='k', lw=3, label='average')
 
     for item in ax.get_yticklabels():
@@ -73,6 +77,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     ax.set_ylim([2e-4, 4e-2])
     ax.set_yscale('log')
 
+    # add genome annotation
     ax=axs[1]
     sns.set_style('white')
     from hivevo.hivevo.HIVreference import HIVreference
@@ -92,6 +97,7 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     else:
         plt.ion()
         plt.show()
+    # output statistics
     print "genome wide variation:", np.std(np.log2(HXB2_masked).mean(axis=0))
     print "position wide variation:", np.mean(np.log2(HXB2_masked+.0001).std(axis=0))
 
