@@ -8,20 +8,23 @@ import os
 from filenames import get_figure_folder
 
 
-def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01):
+def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01, subtype = 'patient'):
     '''
     calculate the fraction of sites that are diverse for different quantiles of subtype entropy
     '''
-    hxb2 = HIVreference(refname='HXB2')
-    good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-
     diverse_fraction = []
+    if subtype=='any':
+        hxb2 = HIVreference(refname='HXB2', subtype = 'any' )  #p['Subtype'])
+        good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
     for pi, pcode in enumerate(patients):
         try:
             p = Patient.load(pcode)
         except:
             print "Can't load patient", pcode
         else:
+            if subtype=='patient':
+                hxb2 = HIVreference(refname='HXB2', subtype = p['Subtype'])
+                good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
             for region in regions:
                 aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
                 if len(aft.mask.shape)<2:
@@ -46,21 +49,24 @@ def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01):
                     diverse_fraction.append(tmp)
     return pd.DataFrame(diverse_fraction)
 
-def collect_correlations(patients, regions, cov_min=1000):
+def collect_correlations(patients, regions, cov_min=1000, subtype='patient'):
     '''
     calculates the correlation of subtype entropy and intra-patient diversity for each 
     sample of the patients each of the regions provided
     '''
-    hxb2 = HIVreference(refname='HXB2')
-    good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-
     correlations = []
+    if subtype=='any':
+        hxb2 = HIVreference(refname='HXB2', subtype = 'any' )  #p['Subtype'])
+        good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
     for pi, pcode in enumerate(patients):
         try:
             p = Patient.load(pcode)
         except:
             print "Can't load patient", pcode
         else:
+            if subtype=='patient':
+                hxb2 = HIVreference(refname='HXB2', subtype = p['Subtype'])
+                good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
             for region in regions:
                 aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
                 if len(aft.mask.shape)<2:
@@ -115,7 +121,8 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     ax.legend(loc=2, fontsize=fs-3, ncol=2, labelspacing=0.1, columnspacing=0.1)
     ax.set_yticks([0,0.25,0.5])
     ax.set_xticks([0,2,4,6,8])
-    ax.set_xlabel('EDI [years]', fontsize=fs)
+    ax.set_xlim([-2,8.5])
+    ax.set_xlabel('ETI [years]', fontsize=fs)
     ax.set_title(r"Spearman's $\rho$", fontsize=fs)
     for item in ax.get_xticklabels()+ax.get_yticklabels():
         item.set_fontsize(fs)
@@ -142,7 +149,7 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     ax.set_yticks([0, 0.1, 0.2, 0.3])
     ax.set_xticks([0,2,4,6,8])
     ax.set_title('fraction of SNPs > 0.01')
-    ax.set_xlabel('EDI [years]', fontsize=fs)
+    ax.set_xlabel('ETI [years]', fontsize=fs)
     for item in ax.get_xticklabels()+ax.get_yticklabels():
         item.set_fontsize(fs)
     ax.legend(loc=2, ncol=2,fontsize=fs-3, title='conservation',
@@ -152,7 +159,7 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
     if fig_filename is not None:
         for ext in figtypes:
-            fig.savefig(fig_filename+'_sfs'+ext)
+            fig.savefig(fig_filename+ext)
     else:
         plt.ion()
         plt.show()
@@ -163,7 +170,12 @@ if __name__=="__main__":
     import pandas as pd
     parser = argparse.ArgumentParser(description="make figure")
     parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
+    parser.add_argument('--groupM', action = 'store_true', help = 'recalculate data')
     params=parser.parse_args()
+    if params.groupM:
+        subtype  = 'any'
+    else:
+        subtype = 'patient'
 
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
@@ -171,17 +183,17 @@ if __name__=="__main__":
     fn_data = fn_data + 'subtype_correlation.pickle'
 
     if not os.path.isfile(fn_data) or params.redo:
-        patients = ['p2', 'p3','p5', 'p8', 'p9', 'p10','p11']
+        patients = ['p1', 'p2', 'p3','p5','p6', 'p8', 'p9', 'p10','p11']
         regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
                    'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000
         af_threshold = 0.01
 
         # determine correlations between intra patient diversity and subtype diversity
-        correlations = collect_correlations(patients, regions, cov_min=cov_min)
+        correlations = collect_correlations(patients, regions, cov_min=cov_min, subtype = subtype)
         # determine genome wide fraction of alleles above a threshold
         diverse_fraction = collect_diverse_sites(patients, regions, 
-                                cov_min=cov_min, af_threshold=af_threshold)
+                                cov_min=cov_min, af_threshold=af_threshold, subtype = subtype)
 
         data={'correlations': correlations,
               'diverse_fraction': diverse_fraction,

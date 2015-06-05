@@ -54,8 +54,9 @@ def collect_substitution_data(patients, regions, cov_min=100):
             for posdna in xrange(aft.shape[-1]):
                 # Get the position in reference coordinates
                 if posdna not in coomapd['pat_to_subtype']:
-                    continue
-                pos_sub = coomapd['pat_to_subtype'][posdna]
+                    pos_sub=-1 #continue
+                else:
+                    pos_sub = coomapd['pat_to_subtype'][posdna]
 
                 # Get allele frequency trajectory
                 aftpos = aft[:, :, posdna]
@@ -74,7 +75,7 @@ def collect_substitution_data(patients, regions, cov_min=100):
                     continue
 
                 # Check for fixation
-                if (aftpos[0, ianc] < 0.95) or (aftpos[-1, ianc] > 0.05):
+                if (aftpos[0, ianc] < 0.7) or np.min(aftpos[:, ianc]) > 0.2:
                     continue
 
                 # Get codon
@@ -165,23 +166,32 @@ def correlate_epitope_substitution(ds, dctl):
     from hivwholeseq.reference import load_custom_reference
     from hivwholeseq.utils.sequence import find_annotation
     ref = load_custom_reference('HXB2', 'gb')
-    start_env = find_annotation(ref, 'gp120').location.nofuzzy_start
-    end_env = find_annotation(ref, 'gp41').location.nofuzzy_end
+    start_env = find_annotation(ref, 'gp41').location.nofuzzy_start 
+    end_env = find_annotation(ref, 'gp41').location.nofuzzy_end - 450
     dg = dg.loc[(dg['pos'] < start_env) | (dg['pos'] >= end_env)]
 
     M = dg.groupby(['epitope', 'substitution']).size().unstack()
+    Ma = np.array(M)
+    xp = 1.0*Ma[1,0]/Ma[0,0]*Ma[0,1]
+    xs = Ma[1,1] - xp
     print M
     from scipy.stats import fisher_exact
-    print 'Fisher\'s exact enrichment:', fisher_exact(np.array(M))[0]
-    print 'Fisher\'s exact P value:', fisher_exact(np.array(M))[1]
+    print 'Fisher\'s exact enrichment:', fisher_exact(Ma)[0]
+    print 'Fisher\'s exact P value:', fisher_exact(Ma)[1]
+    print 'expected:', xp
+    print 'excess:',  xs, 'per patient:',xs/9.0
 
     pos_epi = dg.loc[dg['epitope'] == True]['pos'].unique()
     dg2 = dg.loc[dg['pos'].isin(pos_epi)].copy()
     M2 = dg2.groupby(['epitope', 'substitution']).size().unstack()
+    M2a = np.array(M2)
+    xp = 1.0*M2a[1,0]/M2a[0,0]*M2a[0,1]
+    xs = M2a[1,1] - xp
     print M2
-    print 'Fisher\'s exact enrichment:', fisher_exact(np.array(M2))[0]
-    print 'Fisher\'s exact P value:', fisher_exact(np.array(M2))[1]
-
+    print '\nFisher\'s exact enrichment:', fisher_exact(M2a)[0]
+    print 'Fisher\'s exact P value:', fisher_exact(M2a)[1]
+    print 'expected:', xp
+    print 'excess:',  xs, 'per patient:',xs/9.0
     return {'dg': dg,
             'dg2': dg2,
            }
@@ -290,7 +300,7 @@ if __name__ == '__main__':
     if not os.path.isfile(fn_data) or params.redo:
         patients = ['p1', 'p2', 'p3', 'p5', 'p6', 'p8', 'p9', 'p10', 'p11']
         # FIXME: add more regions
-        regions = ['gag', 'pol', 'gp120', 'gp41', 'vif', 'vpu', 'vpr', 'nef']
+        regions = ['gag', 'pol', 'gp120_noVloops', 'gp41', 'vif', 'vpu', 'vpr', 'nef']
 
         ds = collect_substitution_data(patients, regions)
 
@@ -308,5 +318,5 @@ if __name__ == '__main__':
 
     correlate_epitope_substitution(data['substitutions'], data['ctl'])
 
-    plot_ctl_epitopes(data['ctl'])
-    plot_substitutions(data, fig_filename=foldername+'substitutions')
+    #plot_ctl_epitopes(data['ctl'])
+    #plot_substitutions(data, fig_filename=foldername+'substitutions')

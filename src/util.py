@@ -105,7 +105,7 @@ def boot_strap_patients(df, eval_func, columns=None,  n_bootstrap = 100):
     npats = len(patients)
     replicates = []
     for i in xrange(n_bootstrap):
-        print("Bootstrap",i)
+        if (i%20==0): print("Bootstrap",i)
         pats = patients[np.random.randint(0,npats, size=npats)]
         bs = []
         for pi,pat in enumerate(pats):
