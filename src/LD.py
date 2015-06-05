@@ -1,3 +1,9 @@
+# vim: fdm=indent
+'''
+author:     Richard Neher, Fabio Zanini
+date:       05/06/15
+content:    Plot of linkage disequilibrium.
+'''
 import numpy as np
 import sys,os
 from itertools import izip
@@ -7,6 +13,79 @@ from hivevo.hivevo.af_tools import LD as LDfunc
 from hivwholeseq.filenames import root_data_folder
 from filenames import get_figure_folder
 from util import store_data, load_data, fig_width, fig_fontsize
+
+
+
+def collect_data_LD(patients):
+    '''Collect data for LD plot'''
+    dmin = 40
+    dmin_pad = 200
+    var_min = 0.2
+    cov_min = 200
+    LD_vs_distance = {}
+    Dp_vs_distance = {}
+    bins = np.arange(0,401,40)
+    binc = (bins[:-1]+bins[1:])*0.5
+    for frag in all_fragments:
+        if frag not in ['F'+str(i) for i in xrange(1,7)]:
+            continue
+        dists = []
+        weights_LD = []
+        weights_Dp = []
+        for pcode in patients:
+            p = Patient.load(pcode)
+            depth = p.get_fragment_depth(pad=False, limit_to_dilution=False)
+            depth_pad = p.get_fragment_depth(pad=True, limit_to_dilution=False)
+            for si, sample in enumerate(p.samples):
+                if depth[si][all_fragments.index(frag)]>dmin \
+                    or depth_pad[si][all_fragments.index(frag)]>dmin_pad:
+                    positions, af2p, cov, af1p = sample.get_pair_frequencies(frag, var_min=var_min)
+                    if positions is None:
+                        continue
+                    LD, Dp, p12 =  LDfunc(af2p, af1p, cov, cov_min=100)
+                    X,Y = np.meshgrid(positions, positions)
+                    np.fill_diagonal(cov, 0)
+                    dists.extend(np.abs(X-Y)[cov>=cov_min])
+                    weights_LD.extend(LD[cov>=cov_min])
+                    weights_Dp.extend(Dp[cov>=cov_min])
+                    print (pcode, si, frag,
+                           " # of positions:", len(positions),
+                           'depth:', depth[si][all_fragments.index(frag)])
+                else:
+                    print (pcode, si, frag, "insufficient depth:",
+                           depth[si][all_fragments.index(frag)],
+                           depth_pad[si][all_fragments.index(frag)])
+
+        yn,xn = np.histogram(dists, bins = bins)
+        y,x = np.histogram(dists, weights = weights_LD, bins=bins)
+        LD_vs_distance[frag] = y/(1e-10+yn)
+        y,x = np.histogram(dists, weights = weights_Dp, bins=bins)
+        Dp_vs_distance[frag]=y/(1e-10+yn)
+
+    for pcr in ['PCR1', 'PCR2']:
+        positions, af2p, cov, af1p = control_LD(pcr, var_min=var_min)
+        LD, Dp, p12 =  LDfunc(af2p, af1p, cov, cov_min=100)
+
+        X,Y = np.meshgrid(positions, positions)
+        np.fill_diagonal(cov, 0)
+        dists = np.abs(X-Y)[cov>=cov_min].flatten()
+        weights_LD = LD[cov>=cov_min].flatten()
+        weights_Dp = Dp[cov>=cov_min].flatten()
+
+        yn,xn = np.histogram(dists, bins = bins)
+        y,x = np.histogram(dists, weights = weights_LD, bins=bins)
+        LD_vs_distance[pcr] = y/(1e-10+yn)
+        y,x = np.histogram(dists, weights = weights_Dp, bins=bins)
+        Dp_vs_distance[pcr]=y/(1e-10+yn)
+    data = {'Dp': Dp_vs_distance,
+            'LDrsq': LD_vs_distance,
+            'bins': bins, 'binc': binc,
+            'var_min': var_min, 'cov_min': cov_min,
+            'dmin': dmin, 'dmin_pad': 200,
+            'patients':patients}
+
+    return data
+
 
 
 def control_LD(PCR='PCR1', fragment='F3', var_min = 0.2):
@@ -42,19 +121,22 @@ def control_LD(PCR='PCR1', fragment='F3', var_min = 0.2):
     reduced_af2p /= (1e-10+reduced_acc_cov) 
     return (positions, reduced_af2p, reduced_acc_cov, af1p[:,variable_sites])
 
-def plot_LD(data, fig_filename = None):
+
+def plot_LD(data, fig_filename=None):
+    '''Plot linkage diseqeuilibrium'''
     import seaborn as sns
     from matplotlib import pyplot as plt
-    plt.ion()
+
+    plt.ioff()
     sns.set_style('darkgrid')
     figpath = 'figures/'
-    fs=fig_fontsize
+    fs = fig_fontsize
     fig_size = (fig_width, 0.8*fig_width)
 
     binc = data['binc']
 
-    for LD, label, measure in [(data['Dp'], "linkage disequilibrium D'", 'Dp'),
-                       (data['LDrsq'], 'linkage disequilibrium r^2', 'rsq')]:
+    for LD, label, measure in [(data['Dp'], "Linkage disequilibrium D'", 'Dp'),
+                       (data['LDrsq'], 'Linkage disequilibrium r^2', 'rsq')]:
         fig = plt.figure(figsize=fig_size)
         ax = plt.subplot(111)
         for frag in all_fragments:
@@ -67,14 +149,22 @@ def plot_LD(data, fig_filename = None):
         for item in ax.get_xticklabels() + ax.get_yticklabels():
             item.set_fontsize(fs)
         plt.ylabel(label,fontsize = fs)
-        plt.xlabel("distance [bp]",fontsize = fs)
+        plt.xlabel("Distance [bp]",fontsize = fs)
         plt.legend(loc=(0.5,0.45), ncol=2, fontsize = fs, columnspacing=1)
         plt.tight_layout(rect=(0, 0, 0.98, 1))
         if fig_filename is not None:
             for ext in ['.pdf','.svg', '.png']:
-                plt.savefig(fig_filename+"_"+measure+ext)
+                fig.savefig(fig_filename+"_"+measure+ext)
+                plt.close(fig)
+        else:
+            plt.ion()
+            plt.show()
 
+
+
+# Script
 if __name__=="__main__":
+
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
     fn_data = foldername+'data/'
@@ -82,71 +172,9 @@ if __name__=="__main__":
     patients = ['p' +str(i) for i in xrange(1,12) if i not in [4,7]]
 
     if not os.path.isfile(fn_data):
-        print("Regerating plot data")
-        dmin = 40
-        dmin_pad = 200
-        var_min = 0.2
-        cov_min = 200
-        LD_vs_distance = {}
-        Dp_vs_distance = {}
-        bins = np.arange(0,401,40)
-        binc = (bins[:-1]+bins[1:])*0.5
-        for frag in all_fragments:
-            if frag not in ['F'+str(i) for i in xrange(1,7)]:
-                continue
-            dists = []
-            weights_LD = []
-            weights_Dp = []
-            for pcode in patients:
-                try:
-                    p = Patient.load(pcode)
-                    depth = p.get_fragment_depth(pad=False, limit_to_dilution=False)
-                    depth_pad = p.get_fragment_depth(pad=True, limit_to_dilution=False)
-                except:
-                    print "Can't load patient", pcode
-                else:
-                    for si, sample in enumerate(p.samples):
-                        if depth[si][all_fragments.index(frag)]>dmin \
-                            or depth_pad[si][all_fragments.index(frag)]>dmin_pad:
-                            positions, af2p, cov, af1p = sample.get_pair_frequencies(frag, var_min=var_min)
-                            if positions is None:
-                                continue
-                            LD, Dp, p12 =  LDfunc(af2p, af1p, cov, cov_min=100)
-                            X,Y = np.meshgrid(positions, positions)
-                            np.fill_diagonal(cov, 0)
-                            dists.extend(np.abs(X-Y)[cov>=cov_min])
-                            weights_LD.extend(LD[cov>=cov_min])
-                            weights_Dp.extend(Dp[cov>=cov_min])
-                            print pcode, si, frag, " # of positions:", len(positions), 'depth:', depth[si][all_fragments.index(frag)]
-                        else:
-                            print pcode, si, frag, "insufficient depth:", depth[si][all_fragments.index(frag)], depth_pad[si][all_fragments.index(frag)]
-
-            yn,xn = np.histogram(dists, bins = bins)
-            y,x = np.histogram(dists, weights = weights_LD, bins=bins)
-            LD_vs_distance[frag] = y/(1e-10+yn)
-            y,x = np.histogram(dists, weights = weights_Dp, bins=bins)
-            Dp_vs_distance[frag]=y/(1e-10+yn)
-
-        for pcr in ['PCR1', 'PCR2']:
-            positions, af2p, cov, af1p = control_LD(pcr, var_min=var_min)
-            LD, Dp, p12 =  LDfunc(af2p, af1p, cov, cov_min=100)
-
-            X,Y = np.meshgrid(positions, positions)
-            np.fill_diagonal(cov, 0)
-            dists = np.abs(X-Y)[cov>=cov_min].flatten()
-            weights_LD = LD[cov>=cov_min].flatten()
-            weights_Dp = Dp[cov>=cov_min].flatten()
-
-            yn,xn = np.histogram(dists, bins = bins)
-            y,x = np.histogram(dists, weights = weights_LD, bins=bins)
-            LD_vs_distance[pcr] = y/(1e-10+yn)
-            y,x = np.histogram(dists, weights = weights_Dp, bins=bins)
-            Dp_vs_distance[pcr]=y/(1e-10+yn)
-        data = {'Dp':Dp_vs_distance, 'LDrsq':LD_vs_distance, "bins":bins, "binc":binc,
-                'var_min':var_min, 'cov_min':cov_min, 'dmin':dmin, 'dmin_pad':200, 'patients':patients}
+        data = collect_data_LD(patients)
         store_data(data, fn_data)
     else:
-        print("Loading data from file")
         data = load_data(fn_data)
 
-    plot_LD(data, fig_filename = foldername+'LD')
+    plot_LD(data, fig_filename=foldername+'LD')

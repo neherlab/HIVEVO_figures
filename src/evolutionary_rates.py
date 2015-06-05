@@ -90,7 +90,7 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
                                        'gp120', 'RRE', 'gp41', 'nef', "LTR3'"]}
     draw_genome(ax, genome_annotations,fs=7)
     ax.set_yticks([])
-    ax.set_xlabel('position [bp]', fontsize=fs)
+    ax.set_xlabel('Position [bp]', fontsize=fs)
     ax.xaxis.set_tick_params(labelsize=fs)
 
     # Final touches
