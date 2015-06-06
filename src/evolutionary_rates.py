@@ -35,6 +35,7 @@ def running_average_masked(obs, ws):
 
     return run_avg
 
+
 def weighted_linear_regression(x,y):
     data = np.array([(tmpx, tmpy) for tmpx, tmpy, m in zip(x,y,y.mask) if not m])
     if len(data)>2:
@@ -45,11 +46,13 @@ def weighted_linear_regression(x,y):
     else:
         return np.nan, np.nan
 
-def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
-    ####### plotting ###########
+
+def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
+    '''Plot evolutionary rate in a sliding window'''
     import seaborn as sns
     from matplotlib import pyplot as plt
-    plt.ion()
+
+    plt.ioff()
     sns.set_style('darkgrid')
     figpath = 'figures/'
     fs=fig_fontsize
@@ -67,12 +70,14 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
         ax.plot(np.arange(HXB2_masked.shape[1])[-HXB2_masked.mask[pi]], 
                  HXB2_masked[pi][-HXB2_masked.mask[pi]], alpha = 0.5, label = pcode)
 
-    # plot the geometric mean of the patients
-    ax.plot(np.arange(HXB2_masked.shape[1]), np.exp(np.log(HXB2_masked).mean(axis=0)), c='k', lw=3, label='average')
+    ax.plot(np.arange(HXB2_masked.shape[1]),
+            np.exp(np.log(HXB2_masked).mean(axis=0)),
+            c='k', lw=3,
+            label='average')
 
-    for item in ax.get_yticklabels():
-        item.set_fontsize(fs)
-    ax.set_ylabel('Divergence rate [1/site/year]', fontsize=fs)
+    ax.yaxis.set_tick_params(labelsize=fs)
+    ax.set_ylabel('Evolutionary rate [1/site/year]', fontsize=fs)
+
     ax.legend(loc='upper left', ncol=3, fontsize=fs-3 ,title='Patients')
     ax.set_ylim([2e-4, 4e-2])
     ax.set_yscale('log')
@@ -82,14 +87,17 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     sns.set_style('white')
     from hivevo.hivevo.HIVreference import HIVreference
     refseq = HIVreference('HXB2')
-    draw_genome(ax,{name:refseq.annotation[name] 
-                for name in ["LTR5'",'gag','pol','vif','vpr','vpu','gp120','RRE','gp41','nef',"LTR3'"]},fs=7)
+    genome_annotations = {name:refseq.annotation[name] 
+                          for name in ["LTR5'", 'gag', 'pol', 'vif','vpr','vpu',
+                                       'gp120', 'RRE', 'gp41', 'nef', "LTR3'"]}
+    draw_genome(ax, genome_annotations,fs=7)
     ax.set_yticks([])
     ax.set_xlabel('Position [bp]', fontsize=fs)
-    for item in ax.get_xticklabels():
-        item.set_fontsize(fs)
 
-    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
+    ax.xaxis.set_tick_params(labelsize=fs)
+    # Final touches
+    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.1, h_pad=0.5, w_pad=0.4)
+
     if fig_filename is not None:
         for ext in figtypes:
             fig.savefig(fig_filename+ext)
@@ -97,9 +105,11 @@ def plot_evo_rates(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf'])
     else:
         plt.ion()
         plt.show()
+
     # output statistics
     print "genome wide variation:", np.std(np.log2(HXB2_masked).mean(axis=0))
     print "position wide variation:", np.mean(np.log2(HXB2_masked+.0001).std(axis=0))
+
 
 
 if __name__=="__main__":
@@ -132,10 +142,10 @@ if __name__=="__main__":
                 evo_rates[pcode] =  np.array([weighted_linear_regression(p.ysi, smoothed_divergence[:,i])[rate_or_gof]
                                     for i in xrange(smoothed_divergence.shape[1])])
                 HXB2[pi,toHXB2[:,0]] = evo_rates[pcode][toHXB2[:,1]]
-        data = {'rates':HXB2, 'patients':patients}
+        data = {'rates': HXB2, 'patients': patients}
         store_data(data, fn_data)
     else:
         print("Loading data from file")
         data = load_data(fn_data)
 
-    plot_evo_rates(data, fig_filename = foldername+'evolutionary_rates')
+    plot_evo_rates(data, fig_filename=foldername+'evolutionary_rates')
