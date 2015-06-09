@@ -76,7 +76,7 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
             label='average')
 
     ax.yaxis.set_tick_params(labelsize=fs)
-    ax.set_ylabel('Evolutionary rate [1/site/year]', fontsize=fs)
+    ax.set_ylabel('Divergence rate [1/site/year]', fontsize=fs)
 
     ax.legend(loc='upper left', ncol=3, fontsize=fs-3 ,title='Patients')
     ax.set_ylim([2e-4, 4e-2])
