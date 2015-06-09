@@ -113,13 +113,18 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
 
 if __name__=="__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="make figure")
+    parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
+    params=parser.parse_args()
+
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
     fn_data = foldername+'data/'
     fn_data = fn_data + 'evolutionary_rates.pickle'
 
     patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9', 'p11']
-    if not os.path.isfile(fn_data):
+    if not os.path.isfile(fn_data) or params.redo:
         print("Regerating plot data")
         rate_or_gof = 0
         window_size=300
