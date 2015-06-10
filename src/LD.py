@@ -164,6 +164,10 @@ def plot_LD(data, fig_filename=None):
 
 # Script
 if __name__=="__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="make figure")
+    parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
+    params=parser.parse_args()
 
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
@@ -171,7 +175,7 @@ if __name__=="__main__":
     fn_data = fn_data + 'LD.pickle'
     patients = ['p' +str(i) for i in xrange(1,12) if i not in [4,7]]
 
-    if not os.path.isfile(fn_data):
+    if not os.path.isfile(fn_data) or params.redo:
         data = collect_data_LD(patients)
         store_data(data, fn_data)
     else:
