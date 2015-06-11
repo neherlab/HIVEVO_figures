@@ -140,9 +140,13 @@ if __name__=="__main__":
                 toHXB2 = p.map_to_external_reference('genomewide')
                 aft = p.get_allele_frequency_trajectories('genomewide', cov_min=cov_min)
                 aft[aft<0.002]=0
-                div_traj = [np.ma.array(af.sum(axis=0) - af[p.initial_indices, np.arange(len(p.initial_indices))], shrink=False) 
+                div_traj = [np.ma.array(af.sum(axis=0) - 
+                            af[p.initial_indices, np.arange(len(p.initial_indices))], shrink=False) 
                             for af in aft]
-                print 'total divergence', zip(p.ysi, [x.sum() for x in div_traj])
+
+                print pcode, 'total divergence', zip(np.round(p.ysi), 
+                                                     [[np.round(x[x<th].sum()) for th in [.1, .5, 0.95, 1.0]]
+                                                     for x in div_traj])
                 smoothed_divergence = np.ma.array([ running_average_masked(div, window_size) for div in div_traj])
                 evo_rates[pcode] =  np.array([weighted_linear_regression(p.ysi, smoothed_divergence[:,i])[rate_or_gof]
                                     for i in xrange(smoothed_divergence.shape[1])])
