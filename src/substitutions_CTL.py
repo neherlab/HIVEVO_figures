@@ -197,6 +197,11 @@ def correlate_epitope_substitution(ds, dctl):
            }
 
 
+def number_substitutions_per_patient(data):
+    '''Calculate the median and quartiles of substitutions per patient'''
+    print data.groupby('pcode').size()
+
+
 def plot_ctl_epitopes(data, ax=None, yoffset=0, colormap=None, fs=None):
     '''Plot the predicted CTL epitopes'''
     import matplotlib.pyplot as plt
@@ -317,6 +322,8 @@ if __name__ == '__main__':
 
 
     correlate_epitope_substitution(data['substitutions'], data['ctl'])
+
+    number_substitutions_per_patient(data['substitutions'])
 
     #plot_ctl_epitopes(data['ctl'])
     #plot_substitutions(data, fig_filename=foldername+'substitutions')
