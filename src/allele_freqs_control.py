@@ -94,7 +94,7 @@ def plot_minor_allele_example(data, title='', VERBOSE=0, fig_filename=None):
     axs[1].set_xscale('log')
     axs[1].tick_params(axis='x', labelsize=fig_fontsize)
 
-    add_panel_label(axs[0], 'C', x_offset=-0.4)
+    add_panel_label(axs[0], 'C', x_offset=-0.22)
     plt.tight_layout(pad=0.1, h_pad=0.001, w_pad=0.001)
 
     if title:
@@ -102,7 +102,7 @@ def plot_minor_allele_example(data, title='', VERBOSE=0, fig_filename=None):
 
     if fig_filename is not None:
         for ext in ['.pdf','.svg', '.png']:
-            fig.savefig(fig_filename+"_"+measure+ext)
+            fig.savefig(fig_filename+ext)
             plt.close(fig)
 
     else:
@@ -144,4 +144,6 @@ if __name__ == '__main__':
         data = load_data(fn_data)
 
     plot_minor_allele_example(data,
-                              VERBOSE=VERBOSE)
+                              VERBOSE=VERBOSE,
+                              fig_filename=foldername+'freq_minor_alleles_example',
+                             )
