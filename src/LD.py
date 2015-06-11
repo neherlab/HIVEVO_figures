@@ -123,7 +123,7 @@ def control_LD(PCR='PCR1', fragment='F3', var_min = 0.2):
 
 
 def plot_LD(data, fig_filename=None):
-    '''Plot linkage diseqeuilibrium'''
+    '''Plot linkage disequilibrium'''
     import seaborn as sns
     from matplotlib import pyplot as plt
 
@@ -166,8 +166,8 @@ def plot_LD(data, fig_filename=None):
 if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser(description="make figure")
-    parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
-    params=parser.parse_args()
+    parser.add_argument('--redo', action='store_true', help='recalculate data')
+    params = parser.parse_args()
 
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
