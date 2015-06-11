@@ -15,13 +15,16 @@ if __name__=="__main__":
     plt.ion()
     sns.set_style('darkgrid')
     fs=fig_fontsize
+    # make two figures, each showing one method of template quantification
     fig1 = plt.figure(1, figsize=(fig_width, 0.8*fig_width))
     ax1 = plt.subplot(111)
     add_panel_label(ax1, 'A', x_offset=-0.15)
-    fig1 = plt.figure(2, figsize=(fig_width, 0.8*fig_width))
+    fig2 = plt.figure(2, figsize=(fig_width, 0.8*fig_width))
     ax2 = plt.subplot(111)
     add_panel_label(ax2, 'B', x_offset=-0.15)
-    pat_colors = sns.color_palette(n_colors=len(patients))
+    # define colors for patients and fragments
+    pat_colors = sns.color_palette(sns.color_palette(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99',
+                                '#e31a1c','#fdbf6f','#ff7f00','#cab2d6'], n_colors = len(patients))))
     frag_colors = sns.color_palette(n_colors=6)
     
     depth_estimates = []
@@ -35,9 +38,13 @@ if __name__=="__main__":
             for si, s in enumerate(p.samples):
                 depth_estimates_pat.append(np.ma.concatenate([[p.n_templates_viral_load[si], p.n_templates_dilutions[si]], frag_depth[si]]))
             de_pat = np.array(depth_estimates_pat)
+            # plot the virus load against template quantification by limiting dilution
+            # one color and set of points per patient
             plt.figure(1)
             plt.plot(de_pat[:,0], de_pat[:,1], 'o', c=pat_colors[pi], label=pcode)
             total_viral_load_dilutions_list.extend(zip(de_pat[:,0], de_pat[:,1]))
+
+            # plot the fragment specific estimates, per fragment for time points of this patient
             plt.figure(2)
             for frag in range(6):
                 good_vals= (de_pat[:,2+frag]>1)&(~np.isnan(de_pat[:,1]))
@@ -50,6 +57,8 @@ if __name__=="__main__":
         except (RuntimeError, IndexError, UnboundLocalError) as e:
             print '############\n',pcode,'\n############\n', 'ERROR',e
 
+    # calculate statistics of estimate concordance
+    # mask nan and zero values
     total_viral_load_dilutions_list =  np.array(total_viral_load_dilutions_list)
     for f, val in overlap_dilution_list.iteritems():
         tmp=np.array(val)
@@ -62,7 +71,7 @@ if __name__=="__main__":
         #print val[good_vals,:]
         print "dilution overlap, fragment",str(f+1), spearmanr(val[:,0], val[:,1])
     tmp = np.vstack(overlap_dilution_list.values())
-    print "dilution overla, all fragments", spearmanr(tmp[:,0], tmp[:,1])
+    print "dilution overlap, all fragments", spearmanr(tmp[:,0], tmp[:,1])
 
     plt.figure(1)
     plt.plot([1,1e5], [1,1e5], lw=3, c='grey')
@@ -72,8 +81,8 @@ if __name__=="__main__":
     plt.xlim(1,1e5)
     for item in ax1.get_xticklabels() + ax1.get_yticklabels():
         item.set_fontsize(fs)
-    plt.ylabel('dilutions', fontsize=fs)
-    plt.xlabel('viral load', fontsize=fs)
+    plt.ylabel('Estimate from dilution', fontsize=fs)
+    plt.xlabel('Estimate from viral load', fontsize=fs)
     plt.legend(loc=2, fontsize=fs*0.75, ncol=2)
     plt.tight_layout(rect=(0, 0, 0.98, 1))
     for fmt in ['pdf', 'svg', 'png']:
@@ -88,8 +97,8 @@ if __name__=="__main__":
     plt.xlim(1,1e5)
     for item in ax2.get_xticklabels() + ax2.get_yticklabels():
         item.set_fontsize(fs)
-    plt.xlabel('dilutions', fontsize=fs)
-    plt.ylabel('overlap', fontsize=fs)
+    plt.xlabel('Estimate from dilutions', fontsize=fs)
+    plt.ylabel('Estimate from overlaps', fontsize=fs)
     plt.legend(loc=2, fontsize=fs*0.75, ncol=2)
     plt.tight_layout(rect=(0, 0, 0.98, 1))
     for fmt in ['pdf', 'svg', 'png']:

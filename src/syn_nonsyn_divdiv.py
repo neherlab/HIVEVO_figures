@@ -181,6 +181,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
     for ax, mutclass in izip(axs, ['nonsyn', 'syn']):
         if mutclass=='nonsyn': add_panel_label(ax, 'A', x_offset = -0.11)
+        ax.set_title('synonymous' if mutclass=='syn' else 'nonsynonymous')
         for region in regions:
             ind = (divdiv.loc[:,'region']==region) & (divdiv.loc[:,'mutclass']==mutclass)
             tmp = divdiv.loc[ind,['time_bin', 'diversity', 'divergence', 'pcode']]
@@ -198,7 +199,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
         ax.set_xlim([0,8.5])
         for item in ax.get_yticklabels()+ax.get_xticklabels():
             item.set_fontsize(fs)
-        ax.set_xlabel('EDI [years]', fontsize=fs)
+        ax.set_xlabel('ETI [years]', fontsize=fs)
         #if mutclass=='nonsyn':
         #    ax.set_ylabel('divergence/diversity', fontsize=fs)
 
@@ -223,8 +224,8 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     ax.bar(binc-0.045, sfs['syn']/np.sum(sfs['syn']),width = 0.04, label='synonymous', color=colors[0])
     ax.bar(binc, sfs['nonsyn']/np.sum(sfs['nonsyn']),width = 0.04, label='nonsynonymous', color=colors[1])
     ax.set_yscale('log')
-    ax.set_xlabel('frequency',fontsize=fs)
-    ax.set_ylabel('fractions of SNVs',fontsize=fs)
+    ax.set_xlabel('Frequency',fontsize=fs)
+    ax.set_ylabel('Fractions of SNPs',fontsize=fs)
     ax.legend(loc=1, fontsize=fs)
     ax.set_ylim([0.005,2.0])
     for item in ax.get_yticklabels()+ax.get_xticklabels():

@@ -14,6 +14,7 @@ def running_average_masked(obs, ws):
     '''
     try:
         tmp_vals = np.convolve(np.ones(ws, dtype=float), obs*(1-obs.mask), mode='same')
+         # if the array is not masked, edges needs to be explictly fixed due to smaller counts
         if len(obs.mask.shape)==0:
             tmp_valid = ws*np.ones_like(tmp_vals)
             # fix the edges. using mode='same' assumes zeros outside the range
@@ -24,7 +25,7 @@ def running_average_masked(obs, ws):
             else:
                 tmp_vals[:ws//2]*=float(ws)/np.arange(ws//2+1,ws)
                 tmp_vals[-ws//2:]*=float(ws)/np.arange(ws,ws//2,-1.0)
-        else:
+        else: # if the array is masked, then we get the normalizer from counting the unmasked values
             tmp_valid = np.convolve(np.ones(ws, dtype=float), (1-obs.mask), mode='same')
 
         run_avg = np.ma.array(tmp_vals/tmp_valid)
@@ -61,7 +62,7 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
                             figsize=(fig_width, 0.8*fig_width),
                             gridspec_kw={'height_ratios':[8, 1]})
 
-    # Evolutionary rate
+    # plot the divergence rates for each of the patients
     ax=axs[0]
     HXB2_masked = np.ma.array(data['rates'])
     HXB2_masked.mask = data['rates']<0
@@ -75,12 +76,13 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
             label='average')
 
     ax.yaxis.set_tick_params(labelsize=fs)
-    ax.set_ylabel('Evolutionary rate [1/site/year]', fontsize=fs)
+    ax.set_ylabel('Divergence rate [1/site/year]', fontsize=fs)
+
     ax.legend(loc='upper left', ncol=3, fontsize=fs-3 ,title='Patients')
     ax.set_ylim([2e-4, 4e-2])
     ax.set_yscale('log')
 
-    # Genome annotations
+    # add genome annotation
     ax=axs[1]
     sns.set_style('white')
     from hivevo.hivevo.HIVreference import HIVreference
@@ -91,8 +93,8 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     draw_genome(ax, genome_annotations,fs=7)
     ax.set_yticks([])
     ax.set_xlabel('Position [bp]', fontsize=fs)
-    ax.xaxis.set_tick_params(labelsize=fs)
 
+    ax.xaxis.set_tick_params(labelsize=fs)
     # Final touches
     plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.1, h_pad=0.5, w_pad=0.4)
 
@@ -104,19 +106,25 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
         plt.ion()
         plt.show()
 
+    # output statistics
     print "genome wide variation:", np.std(np.log2(HXB2_masked).mean(axis=0))
     print "position wide variation:", np.mean(np.log2(HXB2_masked+.0001).std(axis=0))
 
 
 
 if __name__=="__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="make figure")
+    parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
+    params=parser.parse_args()
+
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
     fn_data = foldername+'data/'
     fn_data = fn_data + 'evolutionary_rates.pickle'
 
     patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9', 'p11']
-    if not os.path.isfile(fn_data):
+    if not os.path.isfile(fn_data) or params.redo:
         print("Regerating plot data")
         rate_or_gof = 0
         window_size=300
@@ -132,9 +140,13 @@ if __name__=="__main__":
                 toHXB2 = p.map_to_external_reference('genomewide')
                 aft = p.get_allele_frequency_trajectories('genomewide', cov_min=cov_min)
                 aft[aft<0.002]=0
-                div_traj = [np.ma.array(af.sum(axis=0) - af[p.initial_indices, np.arange(len(p.initial_indices))], shrink=False) 
+                div_traj = [np.ma.array(af.sum(axis=0) - 
+                            af[p.initial_indices, np.arange(len(p.initial_indices))], shrink=False) 
                             for af in aft]
-                print 'total divergence', zip(p.ysi, [x.sum() for x in div_traj])
+
+                print pcode, 'total divergence', zip(np.round(p.ysi), 
+                                                     [[np.round(x[x<th].sum()) for th in [.1, .5, 0.95, 1.0]]
+                                                     for x in div_traj])
                 smoothed_divergence = np.ma.array([ running_average_masked(div, window_size) for div in div_traj])
                 evo_rates[pcode] =  np.array([weighted_linear_regression(p.ysi, smoothed_divergence[:,i])[rate_or_gof]
                                     for i in xrange(smoothed_divergence.shape[1])])

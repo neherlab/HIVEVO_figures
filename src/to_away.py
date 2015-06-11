@@ -13,20 +13,21 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
     to_away_divergence = []
     to_away_minor = []
     consensus_distance = {}
+    # if subtypes == 'any' meaning comparison to groupM, we can load the reference here
+    if subtype=='any':
+        hxb2 = HIVreference(refname='HXB2', subtype = st)
+        good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
 
-    # determine genome wide fraction of alleles above a threshold
+    # determine divergence and minor variation at sites that agree with consensus or not
     for pi, pcode in enumerate(patients):
         try:
             p = Patient.load(pcode)
         except:
             print "Can't load patient", pcode
         else:
-            if subtype == 'patient':
-                st = p['Subtype']
-            else:
-                st = subtype
-            hxb2 = HIVreference(refname='HXB2', subtype = st)
-            good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
+            if subtype == 'patient': # if we take the subtype of the patient, load specific ref alignment here
+                hxb2 = HIVreference(refname='HXB2', subtype = p['Subtype'])
+                good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
             for region in regions:
                 aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
 
@@ -46,6 +47,7 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
                                 #&(aft[0].max(axis=0)>0.9)
                                 &(af.argmax(axis=0)<4))[patient_to_subtype[:,2]]) \
                                 & good_ref
+                    # make version of all arrays that contain only unmasked sites and are also ungapped
                     clean_af = af[:,patient_to_subtype[:,2]][:5,good_af]
                     clean_away = away_sites[good_af]
                     clean_consensus = consensus[good_af]
@@ -57,6 +59,7 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
                     clean_derived = clean_af.sum(axis=0) - clean_af[clean_ancestral,np.arange(clean_ancestral.shape[0])]
                     print pcode, region, t
                     
+                    # for each entropy bin, calculate the average divergence and minor variation
                     for sbin, sites in enumerate(clean_entropy_bins):
                         minor_variants.append({'pcode':pcode,'region':region,'time':t,'S_bin':sbin,
                                             'af_away_minor':  np.mean(clean_minor[sites&clean_away]), 
@@ -64,6 +67,8 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
                                             'af_to_minor':    np.mean(clean_minor[sites&(~clean_away)]), 
                                             'af_to_derived':  np.mean(clean_derived[sites&(~clean_away)])})
 
+                    # calculate the minor variation at sites were the founder differs from consensus
+                    # in different allele frequency bins
                     clean_reversion = clean_af[clean_consensus,np.arange(clean_consensus.shape[0])]*(~clean_away)
                     clean_total_divergence = clean_af.sum(axis=0) - clean_af[clean_ancestral,np.arange(clean_ancestral.shape[0])]
                     to_away_divergence.append({'pcode':pcode,'region':region,'time':t,
@@ -118,8 +123,8 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
                     lw = 3, label = u'founder \u2260 '+lblstr)
     ax.set_yscale('log')
     ax.set_xscale('log')
-    ax.set_ylabel('divergence from founder sequence', fontsize = fig_fontsize)
-    ax.set_xlabel('entropy [bits]', fontsize = fig_fontsize)
+    ax.set_ylabel('Divergence from founder sequence', fontsize = fig_fontsize)
+    ax.set_xlabel('Variability [bits]', fontsize = fig_fontsize)
     for item in ax.get_yticklabels()+ax.get_xticklabels():
         item.set_fontsize(fs)
     ax.set_xlim([0.005,2])
@@ -148,7 +153,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         reversion_std = replicate_func(bs, 'reversion', np.std, bin_index='time_bin')
         total_div_std = replicate_func(bs, 'divergence', np.std, bin_index='time_bin')
         fraction = rev_div.loc[:,'reversion']/rev_div.loc[:,'divergence']
-        print 'subtype'
+        print "Comparison:", subtype
         print "Reversions:\n", rev_div.loc[:,'reversion']
         print "Divergence:\n", rev_div.loc[:,'divergence']
         print "Fraction:"
