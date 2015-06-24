@@ -15,7 +15,7 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
     consensus_distance = {}
     # if subtypes == 'any' meaning comparison to groupM, we can load the reference here
     if subtype=='any':
-        hxb2 = HIVreference(refname='HXB2', subtype = st)
+        hxb2 = HIVreference(refname='HXB2', subtype = subtype)
         good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
 
     # determine divergence and minor variation at sites that agree with consensus or not
