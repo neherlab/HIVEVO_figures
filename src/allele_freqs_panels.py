@@ -5,13 +5,13 @@ date:       24/03/15
 content:    Make three panels with allele frequencies in a short genomic region.
 '''
 # Modules
-import os
+import os, argparse
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from hivevo.hivevo.patients import Patient
+from hivevo.patients import Patient
 from filenames import get_figure_folder
 from util import HIVEVO_colormap, store_data, load_data
 
@@ -93,9 +93,11 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
     for pos in xrange(datum['aft'].shape[2]):
         for nuc in xrange(4):
             traj = datum['aft'][:,nuc,pos]
-            traj[traj<0.003] = 0.003
+            traj[traj<0.007] = 0.007
             if (traj[0] < 0.5) and (traj.max() > 0.05):
-                ax.plot(tyears, traj, c=color[pos])
+                ax.plot(tyears, traj, c=color[pos], 
+                        alpha = max(0.05,1+np.log10(traj.max())/1.0),
+                        lw = max(1,3+2*np.log10(traj.max())))
 
     ax.set_ylim(1e-2, 1.35)
     ax.set_xlim(0, tyears[-1] + .1)
@@ -111,7 +113,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
     if fig_filename is not None:
         for ext in figtypes:
             fig.savefig(fig_filename+ext)
-        plt.close(fig)
+        #plt.close(fig)
     else:
         plt.ion()
         plt.show()
@@ -121,6 +123,9 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
 
 # Script
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="make figure")
+    parser.add_argument('--redo', action='store_true', help='recalculate data')
+    params = parser.parse_args()
 
     VERBOSE = 2
 
@@ -129,7 +134,7 @@ if __name__ == '__main__':
     fn_data = foldername+'data/'
     fn_data = fn_data + 'allele_freqs_panels.pickle'
 
-    if not os.path.isfile(fn_data):
+    if not os.path.isfile(fn_data) or params.redo:
         print("Regenerating plot data")
         pcode = 'p3'
         region = 'p17'
