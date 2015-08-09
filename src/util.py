@@ -6,12 +6,21 @@ content:    Generic utils for the paper figures.
 '''
 # Modules
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 fig_width = 5  
 fig_fontsize = 12  
 
 def add_panel_label(ax,label, x_offset=-0.1):
     ax.text(x_offset, 0.95, label, transform=ax.transAxes, fontsize=fig_fontsize*1.5)
+
+patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9', 'p10', 'p11']
+patient_colors = {pcode:col for pcode, col in zip(patients, 
+                    sns.color_palette(
+                        ['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99',
+                         '#e31a1c','#fdbf6f','#ff7f00','#cab2d6'], 
+                    n_colors = len(patients)))}
 
 # Functions
 def HIVEVO_colormap(kind='website'):

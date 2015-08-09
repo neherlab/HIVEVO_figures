@@ -1,8 +1,8 @@
 import numpy as np
 from itertools import izip
-from hivevo.hivevo.patients import Patient
-from hivevo.hivevo.HIVreference import HIVreference
-from hivevo.hivevo.af_tools import divergence
+from hivevo.patients import Patient
+from hivevo.HIVreference import HIVreference
+from hivevo.af_tools import divergence
 from util import store_data, load_data, fig_width, fig_fontsize, add_panel_label ,add_binned_column
 from util import boot_strap_patients, replicate_func
 import os
@@ -178,7 +178,7 @@ if __name__=="__main__":
     
     if not os.path.isfile(fn_data) or params.redo:
         #patients = ['p1', 'p6'] # other subtypes
-        patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9','p10', 'p11'] # all subtypes
+        patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9','p11'] # all subtypes
         regions = ['genomewide']
         #regions = ['gag', 'pol', 'nef'] #, 'env']
         #regions = ['p24', 'p17'] #, 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 

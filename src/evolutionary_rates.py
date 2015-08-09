@@ -6,7 +6,7 @@ from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
 import os
 from filenames import get_figure_folder
 
-def running_average_masked(obs, ws):
+def running_average_masked(obs, ws, min_valid_fraction = 0.95):
     '''
     calculates a running average via convolution, fixing the edges
     obs     --  observations (a masked array)
@@ -31,7 +31,7 @@ def running_average_masked(obs, ws):
         tmp_valid = np.convolve(np.ones(ws, dtype=float), (1-obs.mask), mode='same')
 
     run_avg = np.ma.array(tmp_vals/tmp_valid)
-    run_avg.mask = tmp_valid<ws*0.95
+    run_avg.mask = tmp_valid<ws*min_valid_fraction
 
     return run_avg
 
@@ -141,7 +141,7 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     if fig_filename is not None:
         for ext in figtypes:
             fig.savefig(fig_filename+ext)
-        plt.close(fig)
+        #plt.close(fig)
     else:
         plt.ion()
         plt.show()

@@ -96,8 +96,8 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
             traj[traj<0.007] = 0.007
             if (traj[0] < 0.5) and (traj.max() > 0.05):
                 ax.plot(tyears, traj, c=color[pos], 
-                        alpha = max(0.05,1+np.log10(traj.max())/1.0),
-                        lw = max(1,3+2*np.log10(traj.max())))
+                        alpha = max(0.2,1+np.log10(traj.max())/1.0),
+                        lw = max(1,3+1*np.log10(traj.max())))
 
     ax.set_ylim(1e-2, 1.35)
     ax.set_xlim(0, tyears[-1] + .1)
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     if not os.path.isfile(fn_data) or params.redo:
         print("Regenerating plot data")
-        pcode = 'p3'
+        pcode = 'p1'
         region = 'p17'
         cutoff = 0.01
 

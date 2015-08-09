@@ -2,7 +2,7 @@ import numpy as np
 from itertools import izip
 from hivevo.patients import Patient
 from hivevo.samples import all_fragments
-from util import store_data, load_data, fig_width, fig_fontsize
+from util import store_data, load_data, fig_width, fig_fontsize, patients, patient_colors
 import os
 from filenames import get_figure_folder
 import matplotlib.pyplot as plt
@@ -23,8 +23,10 @@ if __name__=="__main__":
     fn_data = foldername+'data/'
     fn_data = fn_data + 'genomewide_divdiv.pickle'
 
-    patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9', 'p11']
     if not os.path.isfile(fn_data) or params.redo:
+        #####
+        ## recalculate diversity and divergence from allele frequencies
+        #####
         diversity = {}
         divergence = {}
         for pcode in patients:
@@ -32,22 +34,59 @@ if __name__=="__main__":
             for frag in all_fragments:
                 diversity[(pcode,frag)] = (p.ysi, p.get_diversity(frag))
                 divergence[(pcode,frag)] = (p.ysi, p.get_divergence(frag))
+        store_data((diversity, divergence), fn_data)
     else:
         print("Loading data from file")
-        data = load_data(fn_data)
+        diversity, divergence = load_data(fn_data)
 
+#####
+## plot diversity 
+#####
     fig, axs = plt.subplots(2,3, sharey=True, sharex=True)
     for pcode in patients:
         for fi, frag in enumerate(all_fragments):
             ax = axs[fi//3][fi%3]
             ax.plot(diversity[(pcode,frag)][0], diversity[(pcode,frag)][1], 
-                    '-o', label=pcode)
+                    '-o', label=pcode, c=patient_colors[pcode])
+    for ax in axs[:,0]:
+        ax.set_ylabel('diversity')
+        ax.locator_params(nbins=5)
+        ax.tick_params(axis='both', labelsize = fig_fontsize)
+    for ax in axs[-1,:]:
+        ax.set_xlabel('ETI [years]')
+        ax.locator_params(nbins=5)
+        ax.tick_params(axis='both', labelsize = fig_fontsize)
+    axs[0][0].set_ylim([0,0.03])
+    for fi, frag in enumerate(all_fragments):
+        ax = axs[fi//3][fi%3]
+        ax.text(0.8,0.02, frag, fontsize=1.5*fig_fontsize, transform=ax.transAxes)
     axs[0][0].legend(loc=2, ncol=2)
+    plt.tight_layout()
+    for fmt in ['.pdf', '.svg', '.png']:
+        plt.savefig(foldername+'genomewide_diversity'+fmt)
 
+#####
+## plot divergence
+#####
     fig, axs = plt.subplots(2,3, sharey=True, sharex=True)
     for pcode in patients:
         for fi, frag in enumerate(all_fragments):
             ax = axs[fi//3][fi%3]
             ax.plot(divergence[(pcode, frag)][0], divergence[(pcode, frag)][1], 
-                    '-o', label=pcode)
+                    '-o', label=pcode, c=patient_colors[pcode])
+    for ax in axs[:,0]:
+        ax.set_ylabel('diversity')
+        ax.locator_params(nbins=5)
+        ax.tick_params(axis='both', labelsize = fig_fontsize)
+    for ax in axs[-1,:]:
+        ax.set_xlabel('ETI [years]')
+        ax.locator_params(nbins=5)
+        ax.tick_params(axis='both', labelsize = fig_fontsize)
+    axs[0][0].set_ylim([0,0.05])
+    for fi, frag in enumerate(all_fragments):
+        ax = axs[fi//3][fi%3]
+        ax.text(0.8,0.02, frag, fontsize=1.5*fig_fontsize, transform=ax.transAxes)
     axs[0][0].legend(loc=2, ncol=2)
+    plt.tight_layout()
+    for fmt in ['.pdf', '.svg', '.png']:
+        plt.savefig(foldername+'genomewide_divergence'+fmt)

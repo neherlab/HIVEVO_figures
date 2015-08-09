@@ -3,7 +3,7 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.samples import all_fragments
-from util import store_data, load_data, fig_width, fig_fontsize, get_quantiles, add_panel_label
+from util import store_data, load_data, fig_width, fig_fontsize, get_quantiles, add_panel_label, patient_colors, patients
 import os
 from filenames import get_figure_folder
 
@@ -104,9 +104,7 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
     ax=axs[0]
     add_panel_label(ax, 'A', x_offset=-0.15)
     patients = sorted(data['correlations']['pcode'].unique(), key = lambda x:int(x[1:]))
-    colors = {pat:c for pat, c in zip(patients, 
-              sns.color_palette(['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99',
-                                '#e31a1c','#fdbf6f','#ff7f00','#cab2d6'], n_colors = len(patients)))}
+    colors = patient_colors
 
     # calculate mean and variance across regions for each time point and patient
     mean_rho = data['correlations'].groupby(by=['time', 'pcode'], as_index=False).mean().groupby('pcode')
@@ -184,7 +182,6 @@ if __name__=="__main__":
     fn_data = fn_data + 'subtype_correlation.pickle'
 
     if not os.path.isfile(fn_data) or params.redo:
-        patients = ['p1', 'p2', 'p3','p5','p6', 'p8', 'p9', 'p10','p11']
         regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
                    'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000
