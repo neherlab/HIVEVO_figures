@@ -72,7 +72,8 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
         if time>500: # label first time point as month, later ones as years
             ax.set_title(str(int(time / 365.25))+' years', fontsize=fs)
         else:
-            ax.set_title(str(int(time / 30.5))+' months', fontsize=fs)
+            mi = int(time / 30.5)
+            ax.set_title(str(mi)+(' months' if mi>1 else " month"), fontsize=fs)
         ax.xaxis.set_tick_params(labelsize=fs)
 
         if ii == 0:
