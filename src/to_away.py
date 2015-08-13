@@ -1,3 +1,6 @@
+'''
+Script generating the figures and collecting the data on reversion towards consensus
+'''
 import numpy as np
 from itertools import izip
 from hivevo.patients import Patient
@@ -128,13 +131,14 @@ def get_toaway_histograms(subtype, Sc=1):
                 away_sites = ancestral==consensus
                 aft_HXB2 = aft[:,:,patient_to_subtype[:,2]]
 
+                # H is the dict ot add this too, sites are the consensus/non consensus positions
                 for H, sites in [(away_histogram, away_sites), (to_histogram, ~away_sites)]:
                     for Sbin in ['low', 'high']:
-                        if Sbin=='low':
+                        if Sbin=='low': # make a boolean array with the relevant positions == True
                             ind = (sites)&(subtype_entropy<Sc)&(good_ref)
                         else:                    
                             ind = (sites)&(subtype_entropy>=Sc)&(good_ref)
-                        for ti,t in enumerate(p.dsi):
+                        for ti,t in enumerate(p.dsi): # for each time point, make and allele frequency histogram
                             y,x = np.histogram(aft_HXB2[ti,ancestral[ind],np.where(ind)[0]].compressed(), bins=af_bins)
                             H[(pcode, Sbin)][t]=y
 
@@ -142,6 +146,9 @@ def get_toaway_histograms(subtype, Sc=1):
 
 
 def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
+    '''
+    takes a precomputed data dictionary and makes a two panel figure summarizing the results on reversion
+    '''
     ####### plotting ###########
     import seaborn as sns
     from matplotlib import pyplot as plt
@@ -151,8 +158,9 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     fs=fig_fontsize
     fig_size = (1.0*fig_width, 0.6*fig_width)
     fig, axs = plt.subplots(1, 2, figsize=fig_size)
-    nbs=100
+    nbs=100 # number of bootstrap replicates
 
+    # set the colors for the plots, both panels use the same color scheme
     cols = HIVEVO_colormap()
     colors = [cols(x) for x in [0.0, 0.33, 0.66, 0.99]]
 
@@ -162,7 +170,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ax=axs[1]
     Sbins = np.array([0,0.02, 0.08, 0.25, 2])
     Sbinc = 0.5*(Sbins[1:]+Sbins[:-1])
-    def get_Sbin_mean(df):
+    def get_Sbin_mean(df): # regroup and calculate mean in entropy bins
         return df.groupby(by=['S_bin'], as_index=False).mean()
     color_count = 0
     for lblstr, subtype, ls in [('subtype', 'patient', '--'), ('group M', 'any', '-')]:
@@ -200,7 +208,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ##### print reversion statistics
     ####################################################################################
 
-    def get_time_bin_means(df):
+    def get_time_bin_means(df): # get mean of divergence, reversion divergence and time for each time bin
         return df.loc[:,['divergence', 'reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
     for subtype in ['patient', 'any']:
         to_away = data[subtype]['to_away']
@@ -218,10 +226,12 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         print "Comparison:", subtype
         print "Reversions:\n", rev_div.loc[:,'reversion']
         print "Divergence:\n", rev_div.loc[:,'divergence']
+        # print the fraction of divergence that is due to reversion at different times
+        # gives errors as standard deviations over patient bootstraps
         print "Fraction:"
         for frac, total, num_std, denom_std in zip(fraction, rev_div.loc[:,'divergence'],reversion_std, total_div_std):
             print frac, '+/-', np.sqrt(num_std**2/total**2 + denom_std**2*frac**2/total**2)
-        #print reversion_std,total_div_std
+
         print "Consensus!=Founder:",np.mean(data[subtype]['consensus_distance'].values())
 
     ####################################################################################
@@ -234,7 +244,8 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     af_bins=data['af_bins']
     af_binc=0.5*(af_bins[1:]+af_bins[:-1])
 
-    def bin_time(freq_arrays, time_bins):
+    def bin_time(freq_arrays, time_bins):  
+        '''sum up allele frequency histgrams corresponding to the same time bin'''
         binned_hists = [np.zeros_like(af_binc) for ti in time_bins[1:]]
         for hists in freq_arrays.values():
             for t, y in hists.iteritems():
@@ -309,7 +320,11 @@ if __name__=="__main__":
     Sbinc = 0.5*(Sbins[1:]+Sbins[:-1])
 
     if not os.path.isfile(fn_data) or params.redo:
+        af_bins = np.linspace(0,1,11)
+        af_binc = 0.5*(af_bins[:-1]+af_bins[1:])
+        time_bins = np.array([-10,500,1000,1500,2000,2500])
         data = {}
+        data['away_histogram'] = {}; data['to_histogram']={}
         for subtype in ['patient', 'any']:
             minor_variants, to_away_divergence, to_away_minor, consensus_distance = \
                 collect_to_away(patients, regions, Sbins=Sbins, cov_min=cov_min, subtype = subtype)
@@ -319,19 +334,14 @@ if __name__=="__main__":
             add_binned_column(to_away_minor,  [0,1000,2000,4000], 'time')
             data[subtype] = {'minor_variants':minor_variants, 'to_away':to_away_divergence,'to_away_minor':to_away_minor, 
                     'consensus_distance':consensus_distance, 'Sbins':Sbins, 'Sbinc':Sbinc}
+            # get the allele frequency histograms for mutations away and towards consensus
+            data['to_histogram'][subtype], data['away_histogram'][subtype] = get_toaway_histograms(subtype, Sc=10)
+            data['time_bins']=time_bins
+            data['af_bins']=af_bins
 
         store_data(data, fn_data)
     else:
         print("Loading data from file")
         data = load_data(fn_data)
 
-
-    af_bins = np.linspace(0,1,11)
-    af_binc = 0.5*(af_bins[:-1]+af_bins[1:])
-    time_bins = np.array([-10,500,1000,1500,2000,2500])
-    data['away_histogram'] = {}; data['to_histogram']={}
-    for subtype in ['any', 'patient']:
-        data['to_histogram'][subtype], data['away_histogram'][subtype] = get_toaway_histograms(subtype, Sc=10)
-    data['time_bins']=time_bins
-    data['af_bins']=af_bins
     plot_to_away(data, fig_filename=foldername+'to_away')
