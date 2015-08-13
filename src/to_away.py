@@ -149,7 +149,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     sns.set_style('darkgrid')
     figpath = 'figures/'
     fs=fig_fontsize
-    fig_size = (1.4*fig_width, 0.8*fig_width)
+    fig_size = (1.0*fig_width, 0.6*fig_width)
     fig, axs = plt.subplots(1, 2, figsize=fig_size)
     nbs=100
 
@@ -189,11 +189,11 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         color_count+=1
     ax.set_yscale('log')
     ax.set_xscale('log')
-    ax.set_ylabel('Divergence from founder sequence', fontsize = fig_fontsize)
+    ax.set_ylabel('Divergence from founder', fontsize = fig_fontsize)
     ax.set_xlabel('Variability [bits]', fontsize = fig_fontsize)
-    add_panel_label(ax, 'B', x_offset=-0.27)
+    add_panel_label(ax, 'B', x_offset=-0.32)
     for item in ax.get_yticklabels()+ax.get_xticklabels():
-        item.set_fontsize(fs)
+        item.set_fontsize(fs-2)
     ax.set_xlim([0.005,2])
 
     ####################################################################################
@@ -273,13 +273,14 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
             ax.errorbar(time_binc/365.25, div, std_dev, ls = ls, lw=3, c=colors[color_count])
             ax.plot(time_binc/365.25, div, label = toaway, ls = ls, lw=3, c=colors[color_count]) # plot again with label to avoid error bars in legend
             color_count+=1
-    ax.set_ylim([0,0.15])
+    ax.set_ylim([0,0.16])
+    ax.set_yticks([0,0.04, 0.08, 0.12])
     ax.set_xlabel('ETI [years]', fontsize=fs)
-    ax.set_ylabel('Divergence from founder sequence', fontsize=fs)
-    ax.legend(loc=2, fontsize=fs, labelspacing=0)
-    add_panel_label(ax, 'A', x_offset=-0.27)
-    ax.tick_params(axis='both', labelsize=fs)
-    plt.tight_layout() #rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
+    ax.set_ylabel('Divergence from founder', fontsize=fs)
+    ax.legend(loc=2, fontsize=fs-2, labelspacing=0)
+    add_panel_label(ax, 'A', x_offset=-0.32)
+    ax.tick_params(axis='both', labelsize=fs-2)
+    plt.tight_layout(pad=0.3, h_pad=0.5) #rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
     for ext in figtypes:
         fig.savefig(fig_filename+ext)
 
