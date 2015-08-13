@@ -1,3 +1,8 @@
+'''
+script producing the figure comparing evolution at synonymous and nonsynonymous sites
+it contains two version of the data collection procedure, which produce identical results
+The script ingests data from divergence_diversity_correlation.py
+'''
 import argparse
 import numpy as np
 from itertools import izip
@@ -150,6 +155,11 @@ def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
 
 
 def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
+    '''
+    plot divergence and diversity of synonymous and nonsynonymous mutations
+    includes:
+        - a panel that compares syn diversity/nonsyn divergence
+    '''
     n_bootstrap=50
     ####### plotting ###########
     import seaborn as sns
@@ -163,17 +173,17 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
     fig, axs = plt.subplots(2, 2,figsize=fig_size)
     divdiv = data['divdiv']
-    #regions = divdiv.loc[:,'region'].unique().tolist()
-    regions = ['enzymes', 'structural', 'accessory', 'envelope']
+    # in rough the order in which they most dominantly appear in the plot
+    regions = ['envelope', 'accessory', 'structural','enzymes']
     time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 4000])
     time_binc = 0.5*(time_bins[:-1]+time_bins[1:])
     add_binned_column(divdiv, time_bins, 'time')
-#    colors = {reg:c for reg, c in zip(regions, 
-#            sns.color_palette(['#1b9e77','#d95f02','#7570b3','#e7298a'], n_colors=4))}
-    colors = {reg:c for reg, c in zip(regions, [cols(x) for x in [0.1, 0.4, 0.99, 0.7]])}
+
+    # map the regions to rough genomic order to match the genome color map in panel C
+    colors = {reg:c for reg, c in zip(regions, [cols(x) for x in [0.66, 0.99, 0.01, 0.33]])}
     def get_time_bin_mean(df):
         return df.loc[:,['time_bin', 'diversity', 'divergence']].groupby(by=['time_bin'], as_index=False).mean()
-    def label_func(mutclass, region, divordiv):
+    def label_func(mutclass, region, divordiv):  # assign labels to Panels A and B separately to make a combinatorial legend (regions vs syn/nonsyn)
         if divordiv=='divergence' and mutclass=='nonsyn':
             return region
         elif divordiv=='diversity' and region=='accessory':
@@ -181,31 +191,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
         else:
             return None
 
-#    for ax, mutclass in izip(axs[0,:], ['nonsyn', 'syn']):
-#        if mutclass=='nonsyn': add_panel_label(ax, 'A', x_offset = -0.3)
-#        if mutclass=='syn': add_panel_label(ax, 'B', x_offset = -0.3)
-#        ax.set_title('synonymous' if mutclass=='syn' else 'nonsynonymous')
-#        for region in regions:
-#            ind = (divdiv.loc[:,'region']==region) & (divdiv.loc[:,'mutclass']==mutclass)
-#            tmp = divdiv.loc[ind,['time_bin', 'diversity', 'divergence', 'pcode']]
-#            avg_divdiv = get_time_bin_mean(tmp)
-#            bs = boot_strap_patients(tmp, eval_func = get_time_bin_mean, n_bootstrap=n_bootstrap)
-#            ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,'divergence'], replicate_func(bs, 'divergence', np.std, bin_index='time_bin'),
-#                        ls='-', c=colors[region], lw=3, label=label_func(mutclass, region, 'divergence'))
-#            ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,'diversity'], replicate_func(bs, 'diversity', np.std, bin_index='time_bin'),
-#                        ls='--', c=colors[region], lw=3, label=label_func(mutclass, region, 'diversity'))
-#
-#        ax.legend(loc=2, fontsize=fs, numpoints=2)
-#        ax.set_xticks([0,2,4,6,8])
-#        ax.set_yticks([0,.02,.04])
-#        ax.set_ylim([0,.045])
-#        ax.set_xlim([0,8.5])
-#        for item in ax.get_yticklabels()+ax.get_xticklabels():
-#            item.set_fontsize(fs)
-#        ax.set_xlabel('ETI [years]', fontsize=fs)
-#        #if mutclass=='nonsyn':
-#        #    ax.set_ylabel('divergence/diversity', fontsize=fs)
-
+    ########## panel A and B #####################
     for ax, dtype in izip(axs[0,:], ['divergence', 'diversity']):
         add_panel_label(ax, 'A' if dtype=='divergence' else 'B', x_offset = -0.3)
         for mutclass in ['nonsyn', 'syn']:
@@ -214,12 +200,13 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
                 tmp = divdiv.loc[ind,['time_bin', 'diversity', 'divergence', 'pcode']]
                 avg_divdiv = get_time_bin_mean(tmp)
                 bs = boot_strap_patients(tmp, eval_func = get_time_bin_mean, n_bootstrap=n_bootstrap)
+                # plot the same line with and without error bars, labels for legend without
                 ax.plot(time_binc/365.25, avg_divdiv.loc[:,dtype], ls='-' if mutclass=='nonsyn' else '--', 
                             c=colors[region], lw=3, label=label_func(mutclass, region, dtype))
                 ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,dtype], replicate_func(bs, dtype, np.std, bin_index='time_bin'),
                             ls='-' if mutclass=='nonsyn' else '--', c=colors[region], lw=3)
 
-        ax.legend(loc=2, fontsize=fs, numpoints=2, labelspacing = 0)
+        ax.legend(loc=2, fontsize=fs-1, numpoints=2, labelspacing = 0)
         ax.set_xticks([0,2,4,6,8])
         if dtype=='divergence':
             ax.set_yticks([0,.02,.04])
@@ -229,12 +216,10 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
             ax.set_ylim([0,.028])            
         ax.set_xlim([0,8.5])
         ax.set_ylabel(dtype)
-        ax.tick_params(labelsize=fs)
+        ax.tick_params(labelsize=fs-2)
         ax.set_xlabel('ETI [years]', fontsize=fs)
-        #if mutclass=='nonsyn':
-        #    ax.set_ylabel('divergence/diversity', fontsize=fs)
 
-
+    ########## panel C: anti correlation of syn diversity and nonsyn divergence #############
     (avg_nonsyn_divg, avg_nonsyn_divs, avg_syn_divs) = data['divdiv_corr']
     ax = axs[1,0]
     add_panel_label(ax, 'C', x_offset = -0.3)
@@ -242,109 +227,36 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
                    c=[cols(p) for p in np.linspace(0,1,len(avg_nonsyn_divg[::500]))], s=50)
     ax.set_xlabel('nonsyn divergence', fontsize = fig_fontsize)
     ax.set_ylabel('syn diversity', fontsize = fig_fontsize)
+    ax.set_ylim([0,0.028])
     ax.set_xlim([0,0.012])
     ax.set_xticks([0, 0.005,0.01])
     ax.set_yticks([0, 0.01, 0.02])
-    ax.tick_params(labelsize=fig_fontsize)
-    #ax.legend(loc=1)
-    ax.set_ylim([0,0.028])
+    ax.tick_params(labelsize=fig_fontsize-2)
 
-#    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
-#
-#    if fig_filename is not None:
-#        for ext in figtypes:
-#            fig.savefig(fig_filename+ext)
-#            pass
-#    else:
-#        plt.ion()
-#        plt.show()
-#
-#
-#    ########## sfs ##############
+
+    ########## sfs in panel D ##############
     sfs=data['sfs']
-#    fig_size = (2.0/3*fig_width, 0.66*fig_width)
-#    fig = plt.figure(figsize=fig_size)
-#    ax=plt.subplot(111)
     ax = axs[1,1]
     add_panel_label(ax, 'D', x_offset = -0.3)
     colors = sns.color_palette(n_colors=2)
     binc = binc = 0.5*(sfs['bins'][1:]+sfs['bins'][:-1])
     ax.bar(binc-0.045, sfs['syn']/np.sum(sfs['syn']),width = 0.04, label='syn', color=colors[0])
     ax.bar(binc, sfs['nonsyn']/np.sum(sfs['nonsyn']),width = 0.04, label='nonsyn', color=colors[1])
+    ax.set_ylim([0.005,2.0])
     ax.set_yscale('log')
     ax.set_xlabel('Frequency',fontsize=fs)
     ax.set_ylabel('Fractions of SNPs',fontsize=fs)
-    ax.legend(loc=1, fontsize=fs)
-    ax.set_ylim([0.005,2.0])
-    for item in ax.get_yticklabels()+ax.get_xticklabels():
-        item.set_fontsize(fs)
-    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
+    ax.legend(loc=1, fontsize=fs-2)
+    ax.tick_params(labelsize=fig_fontsize-2)
 
+    # finalize and save the figure
+    plt.tight_layout(rect=(0.0, 0.02, 0.98, 0.98), pad=0.05, h_pad=0.5, w_pad=0.4)
     if fig_filename is not None:
         for ext in figtypes:
             fig.savefig(fig_filename+ext)
-            pass
     else:
         plt.ion()
         plt.show()
-
-def plot_syndiv_vs_nonsyndiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
-    n_bootstrap=100
-    ####### plotting ###########
-    import seaborn as sns
-    from matplotlib import pyplot as plt
-    plt.ion()
-    sns.set_style('darkgrid')
-    figpath = 'figures/'
-    fig_size = (fig_width, 0.66*fig_width)
-
-    fig = plt.figure(figsize = fig_size)
-    ax = plt.subplot(111)
-    divdiv = data['divdiv']
-    #regions = divdiv.loc[:,'region'].unique().tolist()
-    regions = ['enzymes', 'structural', 'accessory', 'envelope']
-    time_bins = np.array([0, 200, 500, 1000, 1500, 2000, 4000])
-    time_binc = 0.5*(time_bins[:-1]+time_bins[1:])
-    add_binned_column(divdiv, time_bins, 'time')
-    colors = {reg:c for reg, c in zip(regions, 
-            sns.color_palette(['#1b9e77','#d95f02','#7570b3','#e7298a'], n_colors=4))}
-    def get_time_bin_mean(df):
-        return df.loc[:,['time_bin', 'diversity', 'divergence']].groupby(by=['time_bin'], as_index=False).mean()
-
-    divergence_vs_diversity = {}
-    for mutclass in ['syn', 'nonsyn']:
-        for region in regions:
-            ind = (divdiv.loc[:,'region']==region) & (divdiv.loc[:,'mutclass']==mutclass)
-            tmp = divdiv.loc[ind,['time_bin', 'diversity', 'divergence', 'pcode']]
-            avg_divdiv = get_time_bin_mean(tmp)
-            divergence_vs_diversity[(region, mutclass)] = (np.array(avg_divdiv.loc[:,'diversity'])[-1], 
-                                                           np.array(avg_divdiv.loc[:,'divergence'])[-1])
-
-    interference = np.array([[divergence_vs_diversity[(region, 'nonsyn')][1]/time_binc[-1]*365.25, # rate of nonsyn divergence
-                            divergence_vs_diversity[(region, 'nonsyn')][0],              # final non syn diversity
-                            divergence_vs_diversity[(region, 'syn')][0]]                  # final syn diversity
-                             for region in regions])
-    plt.scatter(interference[:,0], interference[:,2], s=50, label = 'synonymous diversity', color='r')
-    plt.scatter(interference[:,0], interference[:,1], s=50, label = 'nonsynonymous diversity', color='b')
-    for item in ax.get_yticklabels()+ax.get_xticklabels():
-        item.set_fontsize(fig_fontsize)
-    plt.xlim([0,0.006])
-    plt.ylim([0,0.03])
-    plt.legend()
-    plt.xlabel('nonsynonymous divergence rate [1/year]', fontsize=fig_fontsize)
-    plt.ylabel('diversity', fontsize=fig_fontsize)
-
-
-
-    plt.tight_layout()
-    if fig_filename is not None:
-        for ext in figtypes:
-            fig.savefig(fig_filename+'_sfs'+ext)
-            pass
-    else:
-        plt.ion()
-        plt.show()
-    return interference
 
 if __name__=="__main__":
 
@@ -372,6 +284,7 @@ if __name__=="__main__":
     else:
         print("Loading data from file")
         data = load_data(fn_data)
+        # this load additional data produced by script divergence_diversity_correlation
         data['divdiv_corr'] = load_data(fn2_data)
 
     plot_divdiv(data, fig_filename = foldername+'divdiv')
