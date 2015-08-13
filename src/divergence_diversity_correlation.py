@@ -1,3 +1,6 @@
+'''
+script that prepares data for the figure comparing evolution at synonymous and nonsynonymous sites
+'''
 import numpy as np
 from itertools import izip
 from hivevo.patients import Patient
@@ -39,43 +42,47 @@ if __name__=="__main__":
     fn_data = foldername+'data/'
     fn_data = fn_data + 'divdiv_correlation.pickle'
 
-    window_size=1000
+    window_size=600
     cov_min = 200
+    # translated regions that tile the HIV genome to a large extend
     regions = ['gag', 'pol', 'vif', 'vpu', 'vpr', 'nef', 'env']
     if not os.path.isfile(fn_data) or params.redo:
         print("Regenerating plot data")
 
-
+        # prepare arrays to accumulate divergence and diversity data
+        # all are -1, stuff that stays negative will be eventually masked
         HXB2_syn_divs = -np.ones((len(patients), 10000), dtype=float)
         HXB2_nonsyn_divs = -np.ones((len(patients), 10000), dtype=float)
         HXB2_nonsyn_divg = -np.ones((len(patients), 10000), dtype=float)
-
         for pi, pcode in enumerate(patients):
             p = Patient.load(pcode)
             for region in regions:
-                for mutclass in ['syn', 'nonsyn']:
-                    toHXB2 = p.map_to_external_reference(region)
-                    aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
-                    initial_indices = p.get_initial_indices(region)
-                    diversity = (aft*(1-aft)).sum(axis=1)[p.ysi>4].mean(axis=0)
-                    divergence = (1-aft[:,initial_indices,np.arange(len(initial_indices))])[-1]/p.ysi[-1]
-                    gaps = p.get_gaps_by_codon(region, pad=2, threshold=0.05)
-                    syn_mask = p.get_syn_mutations(region)
-                    syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)
-                    #nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(p.get_constrained(region)==False)*(gaps==False)
-                    nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(gaps==False)
+                # map each regional alignment to HXB2, exclude regions gapped in the global alignmnt
+                toHXB2 = p.map_to_external_reference(region)
+                aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
+                initial_indices = p.get_initial_indices(region)
+                diversity = (aft*(1-aft)).sum(axis=1)[p.ysi>4].mean(axis=0)
+                divergence = (1-aft[:,initial_indices,np.arange(len(initial_indices))])[-1]/p.ysi[-1]
+                gaps = p.get_gaps_by_codon(region, pad=2, threshold=0.05)
+                syn_mask = p.get_syn_mutations(region)
+                syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)
+                #nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(p.get_constrained(region)==False)*(gaps==False)
+                nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(gaps==False)
 
-                    divs_syn = -np.ones_like(diversity)
-                    divs_syn[syn_pos] = diversity[syn_pos]
-                    divs_nonsyn = -np.ones_like(diversity)
-                    divs_nonsyn[nonsyn_pos] = diversity[nonsyn_pos]
-                    divg_nonsyn = -np.ones_like(divergence)
-                    divg_nonsyn[nonsyn_pos] = divergence[nonsyn_pos]
+                divs_syn = -np.ones_like(diversity)
+                divs_syn[syn_pos] = diversity[syn_pos]
+                divs_nonsyn = -np.ones_like(diversity)
+                divs_nonsyn[nonsyn_pos] = diversity[nonsyn_pos]
+                divg_nonsyn = -np.ones_like(divergence)
+                divg_nonsyn[nonsyn_pos] = divergence[nonsyn_pos]
 
-                    HXB2_syn_divs[pi,toHXB2[:,0]] = divs_syn[toHXB2[:,2]]
-                    HXB2_nonsyn_divs[pi,toHXB2[:,0]] = divs_nonsyn[toHXB2[:,2]]
-                    HXB2_nonsyn_divg[pi,toHXB2[:,0]] = divg_nonsyn[toHXB2[:,2]]
+                HXB2_syn_divs[pi,toHXB2[:,0]] = divs_syn[toHXB2[:,2]]
+                HXB2_nonsyn_divs[pi,toHXB2[:,0]] = divs_nonsyn[toHXB2[:,2]]
+                HXB2_nonsyn_divg[pi,toHXB2[:,0]] = divg_nonsyn[toHXB2[:,2]]
                 
+        # all HXB2 arrays now contain data where appropriate
+        # negative values are masked (i.e. positions that are never syn)
+        # and we take the average over patients
         HXB2_syn_divs = np.ma.array(HXB2_syn_divs)
         HXB2_syn_divs.mask = HXB2_syn_divs<0
         avg_HXB2_syn_divs = HXB2_syn_divs.mean(axis=0)
@@ -88,10 +95,12 @@ if __name__=="__main__":
         HXB2_nonsyn_divg.mask = HXB2_nonsyn_divg<0
         avg_HXB2_nonsyn_divg = HXB2_nonsyn_divg.mean(axis=0)
 
+        # determine the running average over positions
         avg_syn_divs = running_average_masked(avg_HXB2_syn_divs, window_size, 0.15)
         avg_nonsyn_divs = running_average_masked(avg_HXB2_nonsyn_divs, window_size, 0.3)
         avg_nonsyn_divg = running_average_masked(avg_HXB2_nonsyn_divg, window_size, 0.3)
 
+        # store for reuse here or in syn_nonsyn_divdiv.py
         store_data((avg_nonsyn_divg, avg_nonsyn_divs, avg_syn_divs), fn_data)
     else:
         (avg_nonsyn_divg, avg_nonsyn_divs, avg_syn_divs) = load_data(fn_data)
@@ -121,9 +130,5 @@ if __name__=="__main__":
     ax.set_xlim([0,0.012])
     ax.set_xticks([0, 0.005,0.01])
     ax.tick_params(labelsize=fig_fontsize)
-    #ax.legend(loc=1)
     ax.set_ylim([0,0.03])
     plt.tight_layout()
-
-    for fmt in ['.pdf', '.svg', '.png']:
-        plt.savefig(foldername+'divergence_diversity_correlation'+fmt)
