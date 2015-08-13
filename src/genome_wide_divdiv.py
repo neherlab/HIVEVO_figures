@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import izip
-from hivevo.patients import Patient
-from hivevo.samples import all_fragments
+from hivevo.hivevo.patients import Patient
+from hivevo.hivevo.samples import all_fragments
 from util import store_data, load_data, fig_width, fig_fontsize, patients, patient_colors
 import os
 from filenames import get_figure_folder
@@ -56,7 +56,8 @@ if __name__=="__main__":
         ax.set_xlabel('ETI [years]')
         ax.locator_params(nbins=5)
         ax.tick_params(axis='both', labelsize = fig_fontsize)
-    axs[0][0].set_ylim([0,0.03])
+    axs[0][0].set_ylim([0,0.017])
+    axs[0][0].set_xlim([-0.1,3])
     for fi, frag in enumerate(all_fragments):
         ax = axs[fi//3][fi%3]
         ax.text(0.8,0.02, frag, fontsize=1.5*fig_fontsize, transform=ax.transAxes)

@@ -3,8 +3,8 @@ script that prepares data for the figure comparing evolution at synonymous and n
 '''
 import numpy as np
 from itertools import izip
-from hivevo.patients import Patient
-from hivevo.samples import all_fragments
+from hivevo.hivevo.patients import Patient
+from hivevo.hivevo.samples import all_fragments
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize, patients, HIVEVO_colormap
 from evolutionary_rates import running_average_masked, weighted_linear_regression
 import os

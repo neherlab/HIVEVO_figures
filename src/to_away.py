@@ -3,9 +3,9 @@ Script generating the figures and collecting the data on reversion towards conse
 '''
 import numpy as np
 from itertools import izip
-from hivevo.patients import Patient
-from hivevo.HIVreference import HIVreference
-from hivevo.af_tools import divergence
+from hivevo.hivevo.patients import Patient
+from hivevo.hivevo.HIVreference import HIVreference
+from hivevo.hivevo.af_tools import divergence
 from util import store_data, load_data, fig_width, fig_fontsize, add_panel_label ,add_binned_column,HIVEVO_colormap
 from util import boot_strap_patients, replicate_func
 import os

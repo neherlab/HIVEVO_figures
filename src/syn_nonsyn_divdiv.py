@@ -6,9 +6,9 @@ The script ingests data from divergence_diversity_correlation.py
 import argparse
 import numpy as np
 from itertools import izip
-from hivevo.patients import Patient
-from hivevo.samples import all_fragments
-from hivevo.hivevo.af_tools import divergence, diversity
+from hivevo.hivevo.patients import Patient
+from hivevo.hivevo.samples import all_fragments
+from hivevo.hivevo.hivevo.af_tools import divergence, diversity
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize, add_panel_label, HIVEVO_colormap
 from util import boot_strap_patients, replicate_func, add_binned_column
 import os
