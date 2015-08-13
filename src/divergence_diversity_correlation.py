@@ -42,10 +42,10 @@ if __name__=="__main__":
     fn_data = foldername+'data/'
     fn_data = fn_data + 'divdiv_correlation.pickle'
 
-    window_size=600
+    window_size=1000
     cov_min = 200
     # translated regions that tile the HIV genome to a large extend
-    regions = ['gag', 'pol', 'vif', 'vpu', 'vpr', 'nef', 'env']
+    regions = ['gag', 'pol','vif', 'vpu', 'vpr', 'nef', 'env']
     if not os.path.isfile(fn_data) or params.redo:
         print("Regenerating plot data")
 
@@ -55,6 +55,7 @@ if __name__=="__main__":
         HXB2_nonsyn_divs = -np.ones((len(patients), 10000), dtype=float)
         HXB2_nonsyn_divg = -np.ones((len(patients), 10000), dtype=float)
         for pi, pcode in enumerate(patients):
+            print("patient:",pcode)
             p = Patient.load(pcode)
             for region in regions:
                 # map each regional alignment to HXB2, exclude regions gapped in the global alignmnt
@@ -65,9 +66,9 @@ if __name__=="__main__":
                 divergence = (1-aft[:,initial_indices,np.arange(len(initial_indices))])[-1]/p.ysi[-1]
                 gaps = p.get_gaps_by_codon(region, pad=2, threshold=0.05)
                 syn_mask = p.get_syn_mutations(region)
-                syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)
+                syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)*(~divergence.mask)
                 #nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(p.get_constrained(region)==False)*(gaps==False)
-                nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(gaps==False)
+                nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(gaps==False)*(~divergence.mask)
 
                 divs_syn = -np.ones_like(diversity)
                 divs_syn[syn_pos] = diversity[syn_pos]
@@ -100,7 +101,6 @@ if __name__=="__main__":
         avg_nonsyn_divs = running_average_masked(avg_HXB2_nonsyn_divs, window_size, 0.3)
         avg_nonsyn_divg = running_average_masked(avg_HXB2_nonsyn_divg, window_size, 0.3)
 
-        # store for reuse here or in syn_nonsyn_divdiv.py
         store_data((avg_nonsyn_divg, avg_nonsyn_divs, avg_syn_divs), fn_data)
     else:
         (avg_nonsyn_divg, avg_nonsyn_divs, avg_syn_divs) = load_data(fn_data)
