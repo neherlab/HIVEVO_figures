@@ -2,6 +2,7 @@ import numpy as np
 from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
+from hivevo.hivevo.HIVreference import HIVreference
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
 import os
 from filenames import get_figure_folder
@@ -40,7 +41,7 @@ def weighted_linear_regression(x, y):
     data = np.array([(tmpx, tmpy) for tmpx, tmpy, m in zip(x,y,y.mask) if not m])
     if len(data)>2:
         weights = data[:,1] + 3e-3  #shot noise + sequencing error
-        slope = np.sum(data[:,0]*data[:,1]/weights)/np.sum(data[:,0]**2/weights) 
+        slope = np.sum(data[:,0]*data[:,1]/weights)/np.sum(data[:,0]**2/weights)
         gof = np.corrcoef(x,y)[0,1]
         return slope, gof
     else:
@@ -70,7 +71,7 @@ def get_divergence_trajectory(p, aft=None, only_substitutions=False):
             d = d.sum(axis=0)
             d = np.ma.array(d, mask=af.mask.any(axis=0))
 
-        d = np.ma.array(d, shrink=False) 
+        d = np.ma.array(d, shrink=False)
         div_traj.append(d)
 
     return np.ma.array(div_traj)
@@ -97,7 +98,7 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     HXB2_masked = np.ma.array(data['rates'])
     HXB2_masked.mask = data['rates']<0
     for pi,pcode in enumerate(data['patients']):
-        ax.plot(np.arange(HXB2_masked.shape[1])[-HXB2_masked.mask[pi]], 
+        ax.plot(np.arange(HXB2_masked.shape[1])[-HXB2_masked.mask[pi]],
                  HXB2_masked[pi][-HXB2_masked.mask[pi]], alpha = 0.5, label = pcode)
 
     # plot the average
@@ -127,7 +128,7 @@ def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     sns.set_style('white')
     from hivevo.hivevo.HIVreference import HIVreference
     refseq = HIVreference('HXB2')
-    genome_annotations = {name:refseq.annotation[name] 
+    genome_annotations = {name:refseq.annotation[name]
                           for name in ["LTR5'", 'gag', 'pol', 'vif','vpr','vpu',
                                        'gp120', 'RRE', 'gp41', 'nef', "LTR3'"]}
     draw_genome(ax, genome_annotations,fs=7)
@@ -164,13 +165,13 @@ if __name__=="__main__":
     fn_data = fn_data + 'evolutionary_rates.pickle'
 
     patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9', 'p11']
+
+    rate_or_gof = 0
+    window_size=300
+    cov_min = 200
+
     if not os.path.isfile(fn_data) or params.redo:
         print("Regenerating plot data")
-
-        rate_or_gof = 0
-        window_size=300
-        cov_min = 200
-
         cats = [{'name': 'total', 'only_substitutions': False},
                 {'name': 'substitutions', 'only_substitutions': True},
                ]
@@ -185,8 +186,8 @@ if __name__=="__main__":
             for cat in cats:
                 div_traj = get_divergence_trajectory(p, aft=aft,
                                                      only_substitutions=cat['only_substitutions'])
-                
-                print pcode, cat['name']+' divergence', zip(np.round(p.ysi), 
+
+                print pcode, cat['name']+' divergence', zip(np.round(p.ysi),
                                                      [[np.round(x[x<th].sum()) for th in [.1, .5, 0.95, 1.0]]
                                                      for x in div_traj])
                 smoothed_divergence = np.ma.array([running_average_masked(div, window_size)
@@ -209,3 +210,13 @@ if __name__=="__main__":
         data = load_data(fn_data)
 
     plot_evo_rates(data, fig_filename=foldername+'evolutionary_rates_withsubst')
+
+    # calculate the overall correlation with diversity
+    hxb2 = HIVreference(refname='HXB2', subtype = 'any')
+    HXB2_masked = np.ma.array(data['rates'])
+    HXB2_masked.mask = data['rates']<0
+    avg_log_div = np.log(HXB2_masked).mean(axis=0)
+    from scipy.stats import spearmanr
+    print ("Correlation between groupM entropy and divergence,",
+           spearmanr(avg_log_div[:len(hxb2.entropy)], running_average_masked(np.ma.array(hxb2.entropy),300)))
+
