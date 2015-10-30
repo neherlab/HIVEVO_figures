@@ -1,97 +1,103 @@
+# Modules
+import os
 import numpy as np
+import pandas as pd
 from itertools import izip
+from scipy.stats import spearmanr
+
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.samples import all_fragments
+
 from util import store_data, load_data, fig_width, fig_fontsize, get_quantiles, add_panel_label, patient_colors, patients
-import os
 from filenames import get_figure_folder
 
 
-def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01, subtype = 'patient'):
-    '''
-    calculate the fraction of sites that are diverse for different quantiles of subtype entropy
-    '''
-    diverse_fraction = []
-    if subtype=='any':
-        hxb2 = HIVreference(refname='HXB2', subtype = 'any' )  #p['Subtype'])
-        good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-    for pi, pcode in enumerate(patients):
-        try:
-            p = Patient.load(pcode)
-        except:
-            print "Can't load patient", pcode
-        else:
-            if subtype=='patient':
-                hxb2 = HIVreference(refname='HXB2', subtype = p['Subtype'])
-                good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-            for region in regions:
-                aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
-                if len(aft.mask.shape)<2:
-                    aft.mask = np.zeros_like(aft, dtype=bool)
 
-                # get patient to subtype map and subset entropy vectors
-                patient_to_subtype = p.map_to_external_reference(region, refname = 'HXB2')
-                subtype_entropy = hxb2.get_entropy_in_patient_region(patient_to_subtype)
-                entropy_quantiles = get_quantiles(4, subtype_entropy)
-                good_ref = good_pos_in_reference[patient_to_subtype[:,0]]
-                # loop over times and calculate the correlation for each value
-                for t, af in izip(p.dsi,aft):
-                    good_af = (~np.any(af.mask, axis=0)[patient_to_subtype[:,2]]) & good_ref
-                    tmp_af = af[:,patient_to_subtype[:,2]]
-                    # tmp_af has only columns that are mapable to HXB2
-                    # good_af is a mask for useful columns
-                    # Squant['ind'] below is a mask for positions corresponding to an entropy quantile (again at mapable positions) 
-                    tmp = {'S'+str(i+1):np.mean(tmp_af[:,Squant['ind']*good_af].max(axis=0)\
-                                               <tmp_af[:,Squant['ind']*good_af].sum(axis=0)-af_threshold)
-                                            for i, Squant in entropy_quantiles.iteritems()}
-                    tmp.update({'pcode':pcode,'region':region,'time':t})
-                    diverse_fraction.append(tmp)
-    return pd.DataFrame(diverse_fraction)
-
+# Functions
 def collect_correlations(patients, regions, cov_min=1000, subtype='patient'):
-    '''
-    calculates the correlation of subtype entropy and intra-patient diversity for each 
-    sample of the patients each of the regions provided
-    '''
+    '''Correlation of subtype entropy and intra-patient diversity'''
     correlations = []
     if subtype=='any':
-        hxb2 = HIVreference(refname='HXB2', subtype = 'any' )  #p['Subtype'])
-        good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-    for pi, pcode in enumerate(patients):
-        try:
-            p = Patient.load(pcode)
-        except:
-            print "Can't load patient", pcode
-        else:
-            if subtype=='patient':
-                hxb2 = HIVreference(refname='HXB2', subtype = p['Subtype'])
-                good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
-            for region in regions:
-                aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
-                if len(aft.mask.shape)<2:
-                    aft.mask = np.zeros_like(aft, dtype=bool)
+        hxb2 = HIVreference(refname='HXB2', subtype='any')
+        good_pos_in_reference = hxb2.get_ungapped(threshold=0.05)
 
-                # get patient to subtype map and subset entropy vectors
-                patient_to_subtype = p.map_to_external_reference(region, refname = 'HXB2')
-                subtype_entropy = hxb2.get_entropy_in_patient_region(patient_to_subtype)
-                good_ref = good_pos_in_reference[patient_to_subtype[:,0]]
-                # loop over times and calculate the correlation for each value
-                for t, af in izip(p.dsi,aft):
-                    patient_entropy = np.maximum(0,-np.sum(af[:5]*np.log(1e-10+af[:5]), axis=0))[patient_to_subtype[:,2]]
-                    # good_af is a mask for useful columns
-                    good_af = (~np.any(af.mask, axis=0)[patient_to_subtype[:,2]]) & good_ref
-                    if good_af.sum()>0.5*good_af.shape[0]:
-                        rho,pval = spearmanr(patient_entropy[good_af], subtype_entropy[good_af])
-                        correlations.append({'pcode':pcode,
-                                     'region':region,
-                                     'time':t,
-                                     'rho':rho,
-                                     'pval':pval})
+    for pi, pcode in enumerate(patients):
+        p = Patient.load(pcode)
+
+        if subtype == 'patient':
+            hxb2 = HIVreference(refname='HXB2', subtype=p['Subtype'])
+            good_pos_in_reference = hxb2.get_ungapped(threshold=0.05)
+
+        for region in regions:
+            aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
+            if len(aft.mask.shape)<2:
+                aft.mask = np.zeros_like(aft, dtype=bool)
+
+            # get patient to subtype map and subset entropy vectors
+            patient_to_subtype = p.map_to_external_reference(region, refname='HXB2')
+            subtype_entropy = hxb2.get_entropy_in_patient_region(patient_to_subtype)
+            good_ref = good_pos_in_reference[patient_to_subtype[:,0]]
+
+            # loop over times and calculate the correlation for each value
+            for t, af in izip(p.dsi,aft):
+                patient_entropy = np.maximum(0,-np.sum(af[:5]*np.log(1e-10+af[:5]), axis=0))[patient_to_subtype[:,2]]
+                # good_af is a mask for useful columns
+                good_af = (~np.any(af.mask, axis=0)[patient_to_subtype[:,2]]) & good_ref
+                if good_af.sum()>0.5*good_af.shape[0]:
+                    rho,pval = spearmanr(patient_entropy[good_af], subtype_entropy[good_af])
+                    correlations.append({'pcode':pcode,
+                                 'region':region,
+                                 'time':t,
+                                 'rho':rho,
+                                 'pval':pval})
+
     return pd.DataFrame(correlations)
 
-def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
-    ####### plotting ###########
+
+def collect_diverse_sites(patients, regions, cov_min=1000, af_threshold=0.01, subtype='patient'):
+    '''Fraction of sites that are diverse for different quantiles of subtype entropy'''
+    diverse_fraction = []
+    if subtype=='any':
+        hxb2 = HIVreference(refname='HXB2', subtype='any')
+        good_pos_in_reference = hxb2.get_ungapped(threshold = 0.05)
+
+    for pi, pcode in enumerate(patients):
+        p = Patient.load(pcode)
+
+        if subtype=='patient':
+            hxb2 = HIVreference(refname='HXB2', subtype=p['Subtype'])
+            good_pos_in_reference = hxb2.get_ungapped(threshold=0.05)
+
+        for region in regions:
+            aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min)
+            if len(aft.mask.shape)<2:
+                aft.mask = np.zeros_like(aft, dtype=bool)
+
+            # get patient to subtype map and subset entropy vectors
+            patient_to_subtype = p.map_to_external_reference(region, refname='HXB2')
+            subtype_entropy = hxb2.get_entropy_in_patient_region(patient_to_subtype)
+            entropy_quantiles = get_quantiles(4, subtype_entropy)
+            good_ref = good_pos_in_reference[patient_to_subtype[:,0]]
+
+            # loop over times and calculate the correlation for each value
+            for t, af in izip(p.dsi,aft):
+                good_af = (~np.any(af.mask, axis=0)[patient_to_subtype[:,2]]) & good_ref
+                tmp_af = af[:,patient_to_subtype[:,2]]
+                # tmp_af has only columns that are mappable to HXB2
+                # good_af is a mask for useful columns
+                # Squant['ind'] below is a mask for positions corresponding to an entropy quantile (at mappable positions) 
+                tmp = {'S'+str(i+1):np.mean(tmp_af[:,Squant['ind']*good_af].max(axis=0)\
+                                           <tmp_af[:,Squant['ind']*good_af].sum(axis=0)-af_threshold)
+                                        for i, Squant in entropy_quantiles.iteritems()}
+                tmp.update({'pcode':pcode,'region':region,'time':t})
+                diverse_fraction.append(tmp)
+
+    return pd.DataFrame(diverse_fraction)
+
+
+def plot_subtype_correlation(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
+    '''Plot results'''
     import seaborn as sns
     from matplotlib import pyplot as plt
     plt.ion()
@@ -103,7 +109,7 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
 
     ax=axs[0]
     add_panel_label(ax, 'A', x_offset=-0.15)
-    patients = sorted(data['correlations']['pcode'].unique(), key = lambda x:int(x[1:]))
+    patients = sorted(data['correlations']['pcode'].unique(), key=lambda x:int(x[1:]))
     colors = patient_colors
 
     # calculate mean and variance across regions for each time point and patient
@@ -163,14 +169,15 @@ def plot_subtype_correlation(data, fig_filename = None, figtypes=['.png', '.svg'
         plt.ion()
         plt.show()
 
+
+
+# Script
 if __name__=="__main__":
     import argparse
-    from scipy.stats import spearmanr
-    import pandas as pd
-    parser = argparse.ArgumentParser(description="make figure")
-    parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
-    parser.add_argument('--groupM', action = 'store_true', help = 'recalculate data')
-    params=parser.parse_args()
+    parser = argparse.ArgumentParser(description="make figure for SNP correlations")
+    parser.add_argument('--redo', action='store_true', help='recalculate data')
+    parser.add_argument('--groupM', action='store_true', help='recalculate data')
+    params = parser.parse_args()
     if params.groupM:
         subtype  = 'any'
     else:
@@ -182,13 +189,15 @@ if __name__=="__main__":
     fn_data = fn_data + 'subtype_correlation.pickle'
 
     if not os.path.isfile(fn_data) or params.redo:
-        regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
-                   'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
+        regions = ['p17', 'p24', 'PR', 'RT', 'p15', 'IN', 'vif', 'gp41', 'gp120', 'nef']
+        #regions = ['p24', 'p17', 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
+        #           'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
         cov_min = 1000
         af_threshold = 0.01
 
         # determine correlations between intra patient diversity and subtype diversity
         correlations = collect_correlations(patients, regions, cov_min=cov_min, subtype = subtype)
+
         # determine genome wide fraction of alleles above a threshold
         diverse_fraction = collect_diverse_sites(patients, regions, 
                                 cov_min=cov_min, af_threshold=af_threshold, subtype = subtype)
