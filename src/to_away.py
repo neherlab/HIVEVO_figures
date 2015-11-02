@@ -1,22 +1,30 @@
 '''
 Script generating the figures and collecting the data on reversion towards consensus
 '''
+# Modules
+import os, sys
 import numpy as np
 from itertools import izip
+
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.HIVreference import HIVreference
 from hivevo.hivevo.af_tools import divergence
+
 from util import store_data, load_data, fig_width, fig_fontsize, add_panel_label ,add_binned_column,HIVEVO_colormap
 from util import boot_strap_patients, replicate_func
-import os
 from filenames import get_figure_folder
 
-def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=1000, subtype = 'patient'):
-    '''
-    collect minor variant frequencies, divergences, etc separately for sites that agree or disagree
+
+
+# Functions
+def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=1000, subtype='patient'):
+    '''Collect allele frequencies polarized from cross-sectional consensus
+
+    Collect minor variant frequencies, divergences, etc separately for sites that agree or disagree
     with consensus. consensus is either group M consensus (subtype='any') or the subtype of the 
     respective patient (subtype='patient'). In addition, these quantities are stratified by entropy
     '''
+
     minor_variants = []
     to_away_divergence = []
     to_away_minor = []
@@ -96,11 +104,13 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
 
 
 def get_toaway_histograms(subtype, Sc=1):
-    '''
-    calculate allele frequency histograms for each patient and each time points
+    '''Calculate SFS for towards/away from cross-sectional consensus
+
+    Calculate allele frequency histograms for each patient and each time points
     separately for sites that agree or disagree with consensus.
     this can be done for a low and high entropy category with the threshold set by Sc
     '''
+
     away_histogram = {(pcode, Sbin):{} for Sbin in ['low','high'] for pcode in patients}
     to_histogram = {(pcode, Sbin):{} for Sbin in ['low','high'] for pcode in patients}
     # if subtypes == 'any' meaning comparison to groupM, we can load the reference here
@@ -145,13 +155,16 @@ def get_toaway_histograms(subtype, Sc=1):
     return to_histogram, away_histogram
 
 
-def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
+def plot_to_away(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
+    '''Makes a two panel figure summarizing the results on reversion
+
+    Args:
+        data (dict): data to be plotted (see below)
     '''
-    takes a precomputed data dictionary and makes a two panel figure summarizing the results on reversion
-    '''
-    ####### plotting ###########
+
     import seaborn as sns
     from matplotlib import pyplot as plt
+
     plt.ion()
     sns.set_style('darkgrid')
     figpath = 'figures/'
@@ -165,7 +178,7 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     colors = [cols(x) for x in [0.0, 0.33, 0.66, 0.99]]
 
     ####################################################################################
-    ##### make panel divergence vs entropy
+    # make panel divergence vs entropy
     ####################################################################################
     ax=axs[1]
     Sbins = np.array([0,0.02, 0.08, 0.25, 2])
@@ -205,9 +218,8 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
     ax.set_xlim([0.005,2])
 
     ####################################################################################
-    ##### print reversion statistics
+    # print reversion statistics
     ####################################################################################
-
     def get_time_bin_means(df): # get mean of divergence, reversion divergence and time for each time bin
         return df.loc[:,['divergence', 'reversion','time_bin']].groupby(by=['time_bin'], as_index=False).mean()
     for subtype in ['patient', 'any']:
@@ -235,9 +247,8 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         print "Consensus!=Founder:",np.mean(data[subtype]['consensus_distance'].values())
 
     ####################################################################################
-    ##### make panel divergence vs time
+    # make panel divergence vs time
     ####################################################################################
-
     to_histogram=data['to_histogram']
     away_histogram=data['away_histogram']
     time_bins=data['time_bins']
@@ -296,28 +307,44 @@ def plot_to_away(data, fig_filename = None, figtypes=['.png', '.svg', '.pdf']):
         fig.savefig(fig_filename+ext)
 
 
+
+# Script
 if __name__=="__main__":
+
     import argparse
     import matplotlib.pyplot as plt
     import pandas as pd
+
     parser = argparse.ArgumentParser(description="make figure")
     parser.add_argument('--redo', action = 'store_true', help = 'recalculate data')
-    params=parser.parse_args()
+    parser.add_argument('--type', choices=['nuc', 'aa'], default='nuc',
+                        help='Sequence type (nuc or aa)')
+    parser.add_argument('--reference', choices=['HXB2', 'NL4-3'], default='HXB2',
+                        help='Reference')
+    params = parser.parse_args()
 
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
     fn_data = foldername+'data/'
-    fn_data = fn_data + 'to_away.pickle'
+    fn_data = fn_data + 'to_away'
+    if params.reference != 'HXB2':
+        fn_data = fn_data + '_'+params.reference
+    if params.type == 'aa':
+        fn_data = fn_data + '_aa'
+    fn_data = fn_data + '.pickle'
    
+    #patients = ['p2', 'p3','p5', 'p8', 'p9','p11'] # subtype B
     #patients = ['p1', 'p6'] # other subtypes
     patients = ['p1', 'p2', 'p3','p5', 'p6', 'p8', 'p9','p11'] # all subtypes
-    regions = ['genomewide']
-    #regions = ['gag', 'pol', 'nef'] #, 'env']
-    #regions = ['p24', 'p17'] #, 'RT1', 'RT2', 'RT3', 'RT4', 'PR', 
-    #           'IN1', 'IN2', 'IN3','p15', 'vif', 'nef','gp41','gp1201']
+
+    if params.type == 'nuc':
+        regions = ['genomewide']
+    else:
+        regions = ['p17', 'p24', 'PR', 'RT', 'p15', 'IN', 'vif', 'gp41', 'gp120', 'nef']
+
     cov_min = 1000
-    Sbins = np.array([0,0.03, 0.08, 0.25, 2])
-    Sbinc = 0.5*(Sbins[1:]+Sbins[:-1])
+    Sbins = np.array([0, 0.03, 0.08, 0.25, 2])
+    Sbinc = 0.5 * (Sbins[1:] + Sbins[:-1])
 
     if not os.path.isfile(fn_data) or params.redo:
         af_bins = np.linspace(0,1,11)
@@ -326,18 +353,33 @@ if __name__=="__main__":
         data = {}
         data['away_histogram'] = {}; data['to_histogram']={}
         for subtype in ['patient', 'any']:
-            minor_variants, to_away_divergence, to_away_minor, consensus_distance = \
-                collect_to_away(patients, regions, Sbins=Sbins, cov_min=cov_min, subtype = subtype)
+            (minor_variants,
+             to_away_divergence,
+             to_away_minor,
+             consensus_distance) = collect_to_away(patients,
+                                                   regions,
+                                                   Sbins=Sbins,
+                                                   cov_min=cov_min,
+                                                   subtype=subtype)
 
-            to_away_minor.loc[:,['reversion_spectrum', 'minor_reversion_spectrum']] = \
-                            to_away_minor.loc[:,['reversion_spectrum', 'minor_reversion_spectrum']].astype(float)
+            # make sure data type is float (issues with NaNs and similia)
+            tmp = ['reversion_spectrum', 'minor_reversion_spectrum']
+            to_away_minor.loc[:, tmp] = to_away_minor.loc[:, tmp].astype(float)
+
             add_binned_column(to_away_minor,  [0,1000,2000,4000], 'time')
-            data[subtype] = {'minor_variants':minor_variants, 'to_away':to_away_divergence,'to_away_minor':to_away_minor, 
-                    'consensus_distance':consensus_distance, 'Sbins':Sbins, 'Sbinc':Sbinc}
+            data[subtype] = {'minor_variants': minor_variants,
+                             'to_away': to_away_divergence,
+                             'to_away_minor': to_away_minor,
+                             'consensus_distance': consensus_distance,
+                             'Sbins': Sbins,
+                             'Sbinc': Sbinc}
+
             # get the allele frequency histograms for mutations away and towards consensus
-            data['to_histogram'][subtype], data['away_histogram'][subtype] = get_toaway_histograms(subtype, Sc=10)
-            data['time_bins']=time_bins
-            data['af_bins']=af_bins
+            (data['to_histogram'][subtype],
+             data['away_histogram'][subtype]) = get_toaway_histograms(subtype, Sc=10)
+
+            data['time_bins'] = time_bins
+            data['af_bins'] = af_bins
 
         store_data(data, fn_data)
     else:
