@@ -114,7 +114,7 @@ def collect_to_away(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=10
             consensus_distance)
 
 
-def collect_to_away_aminoacids(patients, regions, Sbins=[0,0.02, 0.08, 0.25, 2], cov_min=1000,
+def collect_to_away_aminoacids(patients, regions, Sbins=[0, 0.1, 0.3, 3], cov_min=1000,
                                refname='HXB2',
                                subtype='patient'):
     '''Collect allele frequencies polarized from cross-sectional consensus for amino acids
@@ -328,7 +328,8 @@ def get_toaway_histograms_aminoacids(subtype, Sc=1, refname='HXB2'):
     return to_histogram, away_histogram
 
 
-def plot_to_away(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
+def plot_to_away(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf'],
+                 sequence_type='nuc'):
     '''Makes a two panel figure summarizing the results on reversion
 
     Args:
@@ -354,7 +355,11 @@ def plot_to_away(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     # make panel divergence vs entropy
     ####################################################################################
     ax=axs[1]
-    Sbins = np.array([0,0.02, 0.08, 0.25, 2])
+    if sequence_type == 'nuc':
+        Sbins = np.array([0, 0.02, 0.08, 0.25, 2])
+    else:
+        Sbins = np.array([0, 0.1, 0.3, 3])
+
     Sbinc = 0.5*(Sbins[1:]+Sbins[:-1])
     def get_Sbin_mean(df): # regroup and calculate mean in entropy bins
         return df.groupby(by=['S_bin'], as_index=False).mean()
@@ -367,14 +372,24 @@ def plot_to_away(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
         mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']] = \
             mv.loc[:,['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived']].astype(float)
         mean_to_away =get_Sbin_mean(mv)
-        bs = boot_strap_patients(mv, eval_func=get_Sbin_mean, n_bootstrap = nbs, 
-                             columns=['af_away_minor', 'af_away_derived', 'af_to_minor', 'af_to_derived', 'S_bin'])
+        bs = boot_strap_patients(mv,
+                                 eval_func=get_Sbin_mean,
+                                 n_bootstrap=nbs, 
+                                 columns=['af_away_minor',
+                                          'af_away_derived',
+                                          'af_to_minor',
+                                          'af_to_derived',
+                                          'S_bin'])
 
         print mean_to_away
         col = 'af_away_derived'
-        ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
-                    replicate_func(bs, col, np.std, bin_index='S_bin'), ls=ls, 
-                    lw = 3, label = 'founder = '+lblstr, c=colors[color_count])
+        ax.errorbar(Sbinc,
+                    mean_to_away.loc[:,col], 
+                    replicate_func(bs, col, np.std, bin_index='S_bin'),
+                    ls=ls, 
+                    lw=3,
+                    label='founder = '+lblstr,
+                    c=colors[color_count])
         color_count+=1
         col = 'af_to_derived'
         ax.errorbar(Sbinc, mean_to_away.loc[:,col], 
@@ -468,8 +483,14 @@ def plot_to_away(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
             ax.errorbar(time_binc/365.25, div, std_dev, ls = ls, lw=3, c=colors[color_count])
             ax.plot(time_binc/365.25, div, label = toaway, ls = ls, lw=3, c=colors[color_count]) # plot again with label to avoid error bars in legend
             color_count+=1
-    ax.set_ylim([0,0.16])
-    ax.set_yticks([0, 0.04, 0.08, 0.12])
+
+    if sequence_type == 'nuc':
+        ax.set_ylim([0,0.16])
+        ax.set_yticks([0, 0.04, 0.08, 0.12])
+    else:
+        ax.set_ylim([0,0.32])
+        ax.set_yticks([0, 0.08, 0.16, 0.24])
+
     ax.set_xlabel('ETI [years]', fontsize=fs)
     ax.set_ylabel('Divergence from founder', fontsize=fs)
     ax.legend(loc=2, fontsize=fs-2, labelspacing=0)
@@ -516,7 +537,12 @@ if __name__=="__main__":
         regions = ['p17', 'p24', 'PR', 'RT', 'p15', 'IN', 'vif', 'gp41', 'gp120', 'nef']
 
     cov_min = 1000
-    Sbins = np.array([0, 0.03, 0.08, 0.25, 2])
+
+    if params.type == 'nuc':
+        Sbins = np.array([0, 0.03, 0.08, 0.25, 2])
+    else:
+        Sbins = np.array([0, 0.1, 0.3, 3])
+
     Sbinc = 0.5 * (Sbins[1:] + Sbins[:-1])
 
     if not os.path.isfile(fn_data) or params.redo:
@@ -589,4 +615,4 @@ if __name__=="__main__":
         fig_filename = fig_filename + '_'+params.reference
     if params.type == 'aa':
         fig_filename = fig_filename + '_aa'
-    plot_to_away(data, fig_filename=fig_filename)
+    plot_to_away(data, fig_filename=fig_filename, sequence_type=params.type)

@@ -52,10 +52,10 @@ def collect_correlations(patients, regions, cov_min=1000, subtype='patient', ref
                 if good_af.sum() > 0.5 * good_af.shape[0]:
                     rho,pval = spearmanr(patient_entropy[good_af], subtype_entropy[good_af])
                     correlations.append({'pcode':pcode,
-                                 'region':region,
-                                 'time':t,
-                                 'rho':rho,
-                                 'pval':pval})
+                                 'region': region,
+                                 'time': t,
+                                 'rho': rho,
+                                 'pval': pval})
 
     return pd.DataFrame(correlations)
 
@@ -102,10 +102,10 @@ def collect_correlations_aminoacids(patients, regions, cov_min=1000, subtype='pa
                 if good_af.sum() > 0.5 * good_af.shape[0]:
                     rho,pval = spearmanr(patient_entropy[good_af], subtype_entropy[good_af])
                     correlations.append({'pcode':pcode,
-                                 'region':region,
-                                 'time':t,
-                                 'rho':rho,
-                                 'pval':pval})
+                                 'region': region,
+                                 'time': t,
+                                 'rho': rho,
+                                 'pval': pval})
 
     return pd.DataFrame(correlations)
 
@@ -340,7 +340,10 @@ if __name__=="__main__":
 
         data={'correlations': correlations,
               'diverse_fraction': diverse_fraction,
-              'regions':regions, 'patients':patients, 'cov_min':cov_min, 'threshold':af_threshold}
+              'regions':regions,
+              'patients':patients,
+              'cov_min':cov_min,
+              'threshold':af_threshold}
         store_data(data, fn_data)
     else:
         print("Loading data from file")

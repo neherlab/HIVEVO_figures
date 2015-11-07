@@ -1,11 +1,14 @@
 # Modules
+import os, sys
 import numpy as np
 from itertools import izip
+from matplotlib import pyplot as plt
+
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
 from hivevo.hivevo.HIVreference import HIVreference, HIVreferenceAminoacid
+
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize
-import os
 from filenames import get_figure_folder
 
 
@@ -17,7 +20,8 @@ def running_average_masked(obs, ws, min_valid_fraction=0.95):
     obs     --  observations (a masked array)
     ws      --  window size (number of points to average)
     '''
-    tmp_vals = np.convolve(np.ones(ws, dtype=float), obs*(1-obs.mask), mode='same')
+    #tmp_vals = np.convolve(np.ones(ws, dtype=float), obs*(1-obs.mask), mode='same')
+    tmp_vals = np.convolve(np.ones(ws, dtype=float), obs.filled(0), mode='same')
 
      # if the array is not masked, edges needs to be explictly fixed due to smaller counts
     if len(obs.mask.shape) == 0:
@@ -35,8 +39,8 @@ def running_average_masked(obs, ws, min_valid_fraction=0.95):
     else:
         tmp_valid = np.convolve(np.ones(ws, dtype=float), (1-obs.mask), mode='same')
 
-    run_avg = np.ma.array(tmp_vals/tmp_valid)
-    run_avg.mask = tmp_valid<ws*min_valid_fraction
+    run_avg = np.ma.array(tmp_vals / tmp_valid)
+    run_avg.mask = tmp_valid < ws * min_valid_fraction
 
     return run_avg
 
@@ -52,33 +56,55 @@ def weighted_linear_regression(x, y):
         return np.nan, np.nan
 
 
-def get_divergence_trajectory(p, aft=None, only_substitutions=False):
+def get_divergence_trajectory(p, cov_min=100, sequence_type='nuc',
+                              only_substitutions=False):
     '''Get divergence in time for a patient'''
-    if aft is None:
-        aft = p.get_allele_frequency_trajectories('genomewide', cov_min=cov_min)
+    import numpy as np
+
+    div_traj = np.ma.masked_all((len(p.samples),
+                                 len(p.get_initial_sequence('genomewide'))),
+                                float)
+
+    if sequence_type == 'nuc':
+        regions = ['genomewide']
+    else:
+        regions = ['p17', 'p24', 'p6', 'p7', 'p2', 'p1',
+                   'PR', 'RT', 'p15', 'IN',
+                   'vif', 'vpu', 'vpr',
+                   'tat',
+                   'gp41', 'gp120', 'nef']
+
+    for region in regions:
+        print region
+        if region == 'genomewide':
+            reg_coo = np.arange(div_traj.shape[-1])
+        else:
+            reg_coo = list(p.annotation[region])[::3]
+
+        aft = p.get_allele_frequency_trajectories(region, cov_min=cov_min,
+                                                  type=sequence_type)
         aft[aft < 0.002] = 0
 
-    div_traj = []
-    ii = p.initial_indices
-    ii2 = np.zeros((aft.shape[1], aft.shape[2]), bool)
-    ii2[ii, np.arange(len(ii))] = True
-    for af in aft:
-        if not only_substitutions:
-            # NOTE: af.sum(axis=0) is always one or masked
-            d = af.sum(axis=0) - af[ii, np.arange(len(ii))]
+        ii = p.get_initial_indices(region, type=sequence_type)
+        ii2 = np.zeros((aft.shape[1], aft.shape[2]), bool)
+        ii2[ii, np.arange(len(ii))] = True
+        for it, af in enumerate(aft):
+            if not only_substitutions:
+                # NOTE: af.sum(axis=0) is always one or masked
+                d = af.sum(axis=0) - af[ii, np.arange(len(ii))]
 
-        else:
-            # NOTE: this criterion for substitutions is quite arbitrary
-            pos_subst = (af > 0.9) & (-ii2)
-            d = np.zeros_like(ii2, float)
-            d[pos_subst] = af[pos_subst]
-            d = d.sum(axis=0)
-            d = np.ma.array(d, mask=af.mask.any(axis=0))
+            else:
+                # NOTE: this criterion for substitutions is quite arbitrary
+                pos_subst = (af > 0.9) & (~ii2)
+                d = np.zeros_like(ii2, float)
+                d[pos_subst] = af[pos_subst]
+                d = d.sum(axis=0)
+                d = np.ma.array(d, mask=af.mask.any(axis=0))
 
-        d = np.ma.array(d, shrink=False)
-        div_traj.append(d)
+            d = np.ma.array(d, shrink=False)
+            div_traj[it, reg_coo] = d
 
-    return np.ma.array(div_traj)
+    return div_traj
 
 
 def plot_evo_rates(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf'],
@@ -198,17 +224,23 @@ if __name__=="__main__":
         for pi, pcode in enumerate(patients):
             p = Patient.load(pcode)
             to_ref = p.map_to_external_reference('genomewide')
-            aft = p.get_allele_frequency_trajectories('genomewide', cov_min=cov_min)
-            aft[aft < 0.002] = 0
 
             for cat in cats:
-                div_traj = get_divergence_trajectory(p, aft=aft,
+                div_traj = get_divergence_trajectory(p, cov_min=cov_min,
+                                                     sequence_type=params.type,
                                                      only_substitutions=cat['only_substitutions'])
 
-                print pcode, cat['name']+' divergence', zip(np.round(p.ysi),
-                                                     [[np.round(x[x<th].sum()) for th in [.1, .5, 0.95, 1.0]]
-                                                     for x in div_traj])
-                smoothed_divergence = np.ma.array([running_average_masked(div, window_size)
+                print (pcode, cat['name']+' divergence',
+                       zip(np.round(p.ysi),
+                           [[np.round(x[x<th].sum()) for th in [.1, .5, 0.95, 1.0]] for x in div_traj]))
+
+                if params.type == 'nuc':
+                    min_valid_fraction = 0.95
+                else:
+                    # Two out of three are masked by design
+                    min_valid_fraction = 0.30
+                smoothed_divergence = np.ma.array([running_average_masked(div, window_size,
+                                                                          min_valid_fraction=min_valid_fraction)
                                                    for div in div_traj])
 
                 evo_rates[cat['name']][pcode] = \
@@ -227,7 +259,12 @@ if __name__=="__main__":
         print("Loading data from file")
         data = load_data(fn_data)
 
-    plot_evo_rates(data, fig_filename=foldername+'evolutionary_rates_withsubst')
+    fig_filename = foldername+'evolutionary_rates_withsubst'
+    if params.reference != 'HXB2':
+        fig_filename = fig_filename + '_' + params.reference
+    if params.type == 'aa':
+        fig_filename = fig_filename + '_aa'
+    plot_evo_rates(data, fig_filename=fig_filename)
 
     # calculate the overall correlation with diversity
     ref = HIVreference(refname=params.reference, subtype='any')
