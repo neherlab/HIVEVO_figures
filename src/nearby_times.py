@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
 import seaborn as sns
-from hivevo.patients import Patient
-from hivevo.samples import all_fragments
-from hivevo.sequence import alpha
+
+from hivevo.hivevo.patients import Patient
+from hivevo.hivevo.samples import all_fragments
+from hivevo.hivevo.sequence import alpha
+
 from filenames import get_figure_folder
 from util import store_data, load_data, fig_width, fig_fontsize, patients, patient_colors, HIVEVO_colormap
 plt.ion()

@@ -11,7 +11,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from hivevo.patients import Patient
+from hivevo.hivevo.patients import Patient
 from filenames import get_figure_folder
 from util import HIVEVO_colormap, store_data, load_data
 
@@ -69,7 +69,7 @@ def plot_allele_freq_example(data, title='', VERBOSE=0, fig_filename=None,
         ax.set_xticks(range(0, len(x), 150))
         ax.set_yscale('log')
         ax.grid(True)
-        if time>500: # label first time point as month, later ones as years
+        if time > 500: # label first time point as month, later ones as years
             ax.set_title(str(int(time / 365.25))+' years', fontsize=fs)
         else:
             mi = int(time / 30.5)
@@ -143,7 +143,6 @@ if __name__ == '__main__':
 
         patient = Patient.load(pcode)
 
-        # FIXME: the matrix has a compress mask, R. do you know why?
         aft = patient.get_allele_frequency_trajectories(region, error_rate=cutoff)
         times = patient.times()
 

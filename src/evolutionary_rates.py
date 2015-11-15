@@ -259,7 +259,9 @@ if __name__=="__main__":
         print("Loading data from file")
         data = load_data(fn_data)
 
-    fig_filename = foldername+'evolutionary_rates_withsubst'
+    fig_filename = foldername+'evolutionary_rates'
+    if False:
+        fig_filename = fig_filename + '_withsubst'
     if params.reference != 'HXB2':
         fig_filename = fig_filename + '_' + params.reference
     if params.type == 'aa':

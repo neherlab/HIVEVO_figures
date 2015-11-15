@@ -8,7 +8,7 @@ import numpy as np
 from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
-from hivevo.hivevo.hivevo.af_tools import divergence, diversity
+from hivevo.hivevo.af_tools import divergence, diversity
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize, add_panel_label, HIVEVO_colormap
 from util import boot_strap_patients, replicate_func, add_binned_column
 import os
@@ -114,8 +114,8 @@ def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
                 syn_sum = syn_mask.sum(axis=0)
                 # NOTE: syn_mask == 0 are substitutions, they make up most
                 # of the nonsynonymous signal
-                pos = {'syn': (syn_sum >= syn_degeneracy) & (-gaps),
-                       'nonsyn': (syn_sum <= 1) & (-p.get_constrained(prot)) & (-gaps),
+                pos = {'syn': (syn_sum >= syn_degeneracy) & (~gaps),
+                       'nonsyn': (syn_sum <= 1) & (~p.get_constrained(prot)) & (~gaps),
                       }
                 
                 print pcode, prot, pos['syn'].sum(), pos['nonsyn'].sum()
@@ -284,7 +284,8 @@ if __name__=="__main__":
     else:
         print("Loading data from file")
         data = load_data(fn_data)
-        # this load additional data produced by script divergence_diversity_correlation
-        data['divdiv_corr'] = load_data(fn2_data)
+
+    # this load additional data produced by script divergence_diversity_correlation
+    data['divdiv_corr'] = load_data(fn2_data)
 
     plot_divdiv(data, fig_filename = foldername+'divdiv')

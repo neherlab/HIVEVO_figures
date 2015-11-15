@@ -18,22 +18,26 @@ from util import fig_width, fig_fontsize, draw_tree
 # Globals
 regions = ['p17', 'V3']
 cutoff = 0.04
+pcode = 'p1'
 
 web_colormap = HIVEVO_colormap()
 
 
 
 # Functions
-def collect_data(regions):
+def collect_data(regions, pcode='p1'):
     '''Get the trees in JSON'''
     username = os.path.split(os.getenv('HOME'))[-1]
     foldername = get_figure_folder(username, 'first')
     fn_data = foldername+'data/'
 
+    print fn_data
+
     data = []
     for region in regions:
-        fn = fn_data+'haplotype_tree_p1_'+region+'.json'
+        fn = fn_data+'haplotype_tree_'+pcode+'_'+region+'.json'
         data.append({'region': region,
+                     'pcode': pcode,
                      'tree': tree_from_json(fn)})
 
     return data
@@ -175,9 +179,9 @@ def plot_haplotype_trees(data, fig_filename=None):
                    edgecolor=datuml['colorstroke'])
         t_text = int(datuml['time'] / 30.5)
         if t_text == 1:
-            t_text = str(t_text)+ 'month'
+            t_text = str(t_text)+ ' month'
         else:
-            t_text = str(t_text)+ 'months'
+            t_text = str(t_text)+ ' months'
         ax.text(xtext + 0.21 * maxdepth,
                 ytext + 0.02 * ax.get_ylim()[0],
                 t_text,
@@ -197,7 +201,7 @@ def plot_haplotype_trees(data, fig_filename=None):
             ha='center')
 
 
-    plt.tight_layout(rect=(0, 0, 0.98, 1))
+    plt.tight_layout(rect=(0, -0.13, 0.98, 1))
 
     if fig_filename is not None:
         fig_folder = os.path.dirname(fig_filename)
@@ -207,7 +211,6 @@ def plot_haplotype_trees(data, fig_filename=None):
         plt.close(fig)
 
     else:
-        plt.tight_layout(rect=(0, 0, 0.98, 1))
         plt.ion()
         plt.show()
 
@@ -218,7 +221,7 @@ def plot_haplotype_trees(data, fig_filename=None):
 if __name__ == '__main__':
 
     VERBOSE = 2
-    data = collect_data(regions)
+    data = collect_data(regions, pcode=pcode)
             
     #filename = get_tree_figure_filename(patient.code,
     #                                    region,

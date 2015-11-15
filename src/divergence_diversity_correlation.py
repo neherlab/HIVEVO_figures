@@ -1,15 +1,17 @@
 '''
 script that prepares data for the figure comparing evolution at synonymous and nonsynonymous sites
 '''
+import os
 import numpy as np
 from itertools import izip
+import matplotlib.pyplot as plt
+
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
+
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize, patients, HIVEVO_colormap
 from evolutionary_rates import running_average_masked, weighted_linear_regression
-import os
 from filenames import get_figure_folder
-import matplotlib.pyplot as plt
 
 
 def get_divergence_trajectory(p, aft=None):
