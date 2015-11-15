@@ -23,6 +23,7 @@ if __name__=="__main__":
     fn_data = foldername+'data/'
     fn_data = fn_data + 'genomewide_divdiv.pickle'
 
+    csv_out = open(foldername+'/genomewide_divdiv.tsv','w')
     if not os.path.isfile(fn_data) or params.redo:
         #####
         ## recalculate diversity and divergence from allele frequencies
@@ -48,6 +49,8 @@ if __name__=="__main__":
             ax = axs[fi//3][fi%3]
             ax.plot(diversity[(pcode,frag)][0], diversity[(pcode,frag)][1], 
                     '-o', label=pcode, c=patient_colors[pcode])
+            csv_out.write('\t'.join(map(str, ['diversity_'+pcode+'_'+frag]+list(diversity[(pcode,frag)][1])))+'\n')
+            csv_out.write('\t'.join(map(str, ['time_'+pcode+'_'+frag]+list(diversity[(pcode,frag)][0])))+'\n')
     for ax in axs[:,0]:
         ax.set_ylabel('diversity')
         ax.locator_params(nbins=5)
@@ -75,6 +78,8 @@ if __name__=="__main__":
             ax = axs[fi//3][fi%3]
             ax.plot(divergence[(pcode, frag)][0], divergence[(pcode, frag)][1], 
                     '-o', label=pcode, c=patient_colors[pcode])
+            csv_out.write('\t'.join(map(str, ['divergence_'+pcode+'_'+frag]+list(divergence[(pcode,frag)][1])))+'\n')
+            csv_out.write('\t'.join(map(str, ['time_'+pcode+'_'+frag]+list(divergence[(pcode,frag)][0])))+'\n')
     for ax in axs[:,0]:
         ax.set_ylabel('diversity')
         ax.locator_params(nbins=5)
@@ -91,3 +96,4 @@ if __name__=="__main__":
     plt.tight_layout()
     for fmt in ['.pdf', '.svg', '.png']:
         plt.savefig(foldername+'genomewide_divergence'+fmt)
+    csv_out.close()

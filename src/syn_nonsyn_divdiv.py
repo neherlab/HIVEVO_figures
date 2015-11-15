@@ -8,7 +8,7 @@ import numpy as np
 from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
-from hivevo.hivevo.hivevo.af_tools import divergence, diversity
+from hivevo.hivevo.af_tools import divergence, diversity
 from util import store_data, load_data, draw_genome, fig_width, fig_fontsize, add_panel_label, HIVEVO_colormap
 from util import boot_strap_patients, replicate_func, add_binned_column
 import os
@@ -192,6 +192,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
             return None
 
     ########## panel A and B #####################
+    csv_out = open(fig_filename+'_AB.tsv', 'w')
     for ax, dtype in izip(axs[0,:], ['divergence', 'diversity']):
         add_panel_label(ax, 'A' if dtype=='divergence' else 'B', x_offset = -0.3)
         for mutclass in ['nonsyn', 'syn']:
@@ -205,6 +206,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
                             c=colors[region], lw=3, label=label_func(mutclass, region, dtype))
                 ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,dtype], replicate_func(bs, dtype, np.std, bin_index='time_bin'),
                             ls='-' if mutclass=='nonsyn' else '--', c=colors[region], lw=3)
+                csv_out.write('\t'.join(map(str,[dtype, mutclass, region]+list(avg_divdiv.loc[:,dtype])))+'\n')
 
         ax.legend(loc=2, fontsize=fs-1, numpoints=2, labelspacing = 0)
         ax.set_xticks([0,2,4,6,8])
@@ -218,13 +220,19 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
         ax.set_ylabel(dtype)
         ax.tick_params(labelsize=fs-2)
         ax.set_xlabel('ETI [years]', fontsize=fs)
+    csv_out.close()
 
     ########## panel C: anti correlation of syn diversity and nonsyn divergence #############
+    csv_out = open(fig_filename+'_C.tsv', 'w')
     (avg_nonsyn_divg, avg_nonsyn_divs, avg_syn_divs) = data['divdiv_corr']
     ax = axs[1,0]
     add_panel_label(ax, 'C', x_offset = -0.3)
-    ax.scatter(avg_nonsyn_divg[::500], avg_syn_divs[::500], 
-                   c=[cols(p) for p in np.linspace(0,1,len(avg_nonsyn_divg[::500]))], s=50)
+    x_data, y_data = avg_nonsyn_divg[::500], avg_syn_divs[::500]
+    ax.scatter(x_data, y_data, c=[cols(p) for p in np.linspace(0,1,len(x_data))], s=50)
+    csv_out.write('\t'.join(map(str, ["nonsyn_divergence"]+list(x_data)))+'\n')
+    csv_out.write('\t'.join(map(str, ["syn_diversity"]+list(y_data)))+'\n')
+    csv_out.close()
+
     ax.set_xlabel('nonsyn divergence', fontsize = fig_fontsize)
     ax.set_ylabel('syn diversity', fontsize = fig_fontsize)
     ax.set_ylim([0,0.028])
@@ -235,6 +243,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
 
 
     ########## sfs in panel D ##############
+    csv_out = open(fig_filename+'_D.tsv', 'w')
     sfs=data['sfs']
     ax = axs[1,1]
     add_panel_label(ax, 'D', x_offset = -0.3)
@@ -242,6 +251,10 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
     binc = binc = 0.5*(sfs['bins'][1:]+sfs['bins'][:-1])
     ax.bar(binc-0.045, sfs['syn']/np.sum(sfs['syn']),width = 0.04, label='syn', color=colors[0])
     ax.bar(binc, sfs['nonsyn']/np.sum(sfs['nonsyn']),width = 0.04, label='nonsyn', color=colors[1])
+    csv_out.write('\t'.join(map(str, ["bin_centers"]+list(binc)))+'\n')
+    csv_out.write('\t'.join(map(str, ["sfs_nonsyn"]+list(sfs['nonsyn']/np.sum(sfs['nonsyn']))))+'\n')
+    csv_out.write('\t'.join(map(str, ["sfs_syn"]+list(sfs['syn']/np.sum(sfs['syn']))))+'\n')
+    csv_out.close()
     ax.set_ylim([0.005,2.0])
     ax.set_yscale('log')
     ax.set_xlabel('Frequency',fontsize=fs)
@@ -284,7 +297,7 @@ if __name__=="__main__":
     else:
         print("Loading data from file")
         data = load_data(fn_data)
-        # this load additional data produced by script divergence_diversity_correlation
-        data['divdiv_corr'] = load_data(fn2_data)
+    # this load additional data produced by script divergence_diversity_correlation
+    data['divdiv_corr'] = load_data(fn2_data)
 
     plot_divdiv(data, fig_filename = foldername+'divdiv')
