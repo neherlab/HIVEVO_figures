@@ -219,7 +219,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
         ax.set_xlim([0,8.5])
         ax.set_ylabel(dtype)
         ax.tick_params(labelsize=fs-2)
-        ax.set_xlabel('ETI [years]', fontsize=fs)
+        ax.set_xlabel('Years since EDI', fontsize=fs)
     csv_out.close()
 
     ########## panel C: anti correlation of syn diversity and nonsyn divergence #############

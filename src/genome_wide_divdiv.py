@@ -56,15 +56,15 @@ if __name__=="__main__":
         ax.locator_params(nbins=5)
         ax.tick_params(axis='both', labelsize = fig_fontsize)
     for ax in axs[-1,:]:
-        ax.set_xlabel('ETI [years]')
+        ax.set_xlabel('Years since EDI]')
         ax.locator_params(nbins=5)
         ax.tick_params(axis='both', labelsize = fig_fontsize)
     axs[0][0].set_ylim([0,0.017])
-    axs[0][0].set_xlim([-0.1,3])
+    axs[0][0].set_xlim([-0.1,4])
     for fi, frag in enumerate(all_fragments):
         ax = axs[fi//3][fi%3]
-        ax.text(0.8,0.02, frag, fontsize=1.5*fig_fontsize, transform=ax.transAxes)
-    axs[0][0].legend(loc=2, ncol=2)
+        ax.text(0.02,0.9, frag, fontsize=1.5*fig_fontsize, transform=ax.transAxes)
+    axs[0][0].legend(loc=1, ncol=2)
     plt.tight_layout()
     for fmt in ['.pdf', '.svg', '.png']:
         plt.savefig(foldername+'genomewide_diversity'+fmt)
@@ -85,7 +85,7 @@ if __name__=="__main__":
         ax.locator_params(nbins=5)
         ax.tick_params(axis='both', labelsize = fig_fontsize)
     for ax in axs[-1,:]:
-        ax.set_xlabel('ETI [years]')
+        ax.set_xlabel('Years since EDI]')
         ax.locator_params(nbins=5)
         ax.tick_params(axis='both', labelsize = fig_fontsize)
     axs[0][0].set_ylim([0,0.05])
