@@ -18,7 +18,7 @@ from filenames import get_figure_folder
 def collect_data_richard(patients, regions, syn_degeneracy=2):
     '''Collect data for divergence and diversity'''
 
-    syn_divergence = {reg:{p:[] for p in patients} for reg in regions} 
+    syn_divergence = {reg:{p:[] for p in patients} for reg in regions}
     syn_diversity = {reg:{p:[] for p in patients} for reg in regions}
     nonsyn_divergence = {reg:{p:[] for p in patients} for reg in regions}
     nonsyn_diversity = {reg:{p:[] for p in patients} for reg in regions}
@@ -26,7 +26,7 @@ def collect_data_richard(patients, regions, syn_degeneracy=2):
 
     nbins=10
     sfs_tmin=1000
-    sfs = {'syn':np.zeros(nbins, dtype=float), 
+    sfs = {'syn':np.zeros(nbins, dtype=float),
            'nonsyn':np.zeros(nbins, dtype='float'),
            'bins':np.linspace(0.01,0.99,nbins+1)}
     time_binc = 0.5*(time_bins[1:]+time_bins[:-1])
@@ -46,13 +46,13 @@ def collect_data_richard(patients, regions, syn_degeneracy=2):
                     syn_pos = (syn_mask.sum(axis=0)>1)*(gaps==False)
                     nonsyn_pos = (syn_mask.sum(axis=0)<=1)*(p.get_constrained(prot)==False)*(gaps==False)
                     print pcode, prot, syn_pos.sum(), nonsyn_pos.sum()
-                    syn_divergence[region][pcode].extend([(t, divergence(af[:,syn_pos], 
+                    syn_divergence[region][pcode].extend([(t, divergence(af[:,syn_pos],
                                              initial_indices[syn_pos])) for t,af in zip(p.dsi, aft)])
-                    syn_diversity[region][pcode].extend([(t, diversity(af[:,syn_pos])) 
+                    syn_diversity[region][pcode].extend([(t, diversity(af[:,syn_pos]))
                                                         for t,af in zip(p.dsi, aft)])
-                    nonsyn_divergence[region][pcode].extend([(t, divergence(af[:,nonsyn_pos], 
+                    nonsyn_divergence[region][pcode].extend([(t, divergence(af[:,nonsyn_pos],
                                              initial_indices[nonsyn_pos])) for t,af in zip(p.dsi, aft)])
-                    nonsyn_diversity[region][pcode].extend([(t, diversity(af[:,nonsyn_pos])) 
+                    nonsyn_diversity[region][pcode].extend([(t, diversity(af[:,nonsyn_pos]))
                                                            for t,af in zip(p.dsi, aft)])
 
                     syn_derived = syn_mask.copy()
@@ -92,7 +92,7 @@ def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
     # Prepare SFS
     nbins=10
     sfs_tmin=1000
-    sfs = {'syn': np.zeros(nbins, dtype=float), 
+    sfs = {'syn': np.zeros(nbins, dtype=float),
            'nonsyn': np.zeros(nbins, dtype=float),
            'bins': np.linspace(0.01, 0.99, nbins+1),
           }
@@ -114,10 +114,10 @@ def collect_data_fabio(patients, regions, cov_min=100, syn_degeneracy=2):
                 syn_sum = syn_mask.sum(axis=0)
                 # NOTE: syn_mask == 0 are substitutions, they make up most
                 # of the nonsynonymous signal
-                pos = {'syn': (syn_sum >= syn_degeneracy) & (-gaps),
-                       'nonsyn': (syn_sum <= 1) & (-p.get_constrained(prot)) & (-gaps),
+                pos = {'syn': (syn_sum >= syn_degeneracy) & (~gaps),
+                       'nonsyn': (syn_sum <= 1) & (~p.get_constrained(prot)) & (~gaps),
                       }
-                
+
                 print pcode, prot, pos['syn'].sum(), pos['nonsyn'].sum()
 
                 # Divergence/diversity
@@ -202,7 +202,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
                 avg_divdiv = get_time_bin_mean(tmp)
                 bs = boot_strap_patients(tmp, eval_func = get_time_bin_mean, n_bootstrap=n_bootstrap)
                 # plot the same line with and without error bars, labels for legend without
-                ax.plot(time_binc/365.25, avg_divdiv.loc[:,dtype], ls='-' if mutclass=='nonsyn' else '--', 
+                ax.plot(time_binc/365.25, avg_divdiv.loc[:,dtype], ls='-' if mutclass=='nonsyn' else '--',
                             c=colors[region], lw=3, label=label_func(mutclass, region, dtype))
                 ax.errorbar(time_binc/365.25, avg_divdiv.loc[:,dtype], replicate_func(bs, dtype, np.std, bin_index='time_bin'),
                             ls='-' if mutclass=='nonsyn' else '--', c=colors[region], lw=3)
@@ -215,7 +215,7 @@ def plot_divdiv(data, fig_filename=None, figtypes=['.png', '.svg', '.pdf']):
             ax.set_ylim([0,.048])
         else:
             ax.set_yticks([0,.01,.02])
-            ax.set_ylim([0,.028])            
+            ax.set_ylim([0,.028])
         ax.set_xlim([0,8.5])
         ax.set_ylabel(dtype)
         ax.tick_params(labelsize=fs-2)
@@ -297,6 +297,7 @@ if __name__=="__main__":
     else:
         print("Loading data from file")
         data = load_data(fn_data)
+
     # this load additional data produced by script divergence_diversity_correlation
     data['divdiv_corr'] = load_data(fn2_data)
 

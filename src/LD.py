@@ -10,7 +10,9 @@ from itertools import izip
 from hivevo.hivevo.patients import Patient
 from hivevo.hivevo.samples import all_fragments
 from hivevo.hivevo.af_tools import LD as LDfunc
+
 from hivwholeseq.filenames import root_data_folder
+
 from filenames import get_figure_folder
 from util import store_data, load_data, fig_width, fig_fontsize
 
@@ -36,13 +38,19 @@ def collect_data_LD(patients):
             p = Patient.load(pcode)
             depth = p.get_fragment_depth(pad=False, limit_to_dilution=False)
             depth_pad = p.get_fragment_depth(pad=True, limit_to_dilution=False)
+
             for si, sample in enumerate(p.samples):
-                if depth[si][all_fragments.index(frag)]>dmin \
-                    or depth_pad[si][all_fragments.index(frag)]>dmin_pad:
+
+                # check for sufficient depth
+                if ((depth[si][all_fragments.index(frag)] > dmin) or 
+                    (depth_pad[si][all_fragments.index(frag)] > dmin_pad)):
+
                     positions, af2p, cov, af1p = sample.get_pair_frequencies(frag, var_min=var_min)
+
                     if positions is None:
                         continue
                     LD, Dp, p12 =  LDfunc(af2p, af1p, cov, cov_min=100)
+
                     X,Y = np.meshgrid(positions, positions)
                     np.fill_diagonal(cov, 0)
                     dists.extend(np.abs(X-Y)[cov>=cov_min])
@@ -88,7 +96,7 @@ def collect_data_LD(patients):
 
 
 
-def control_LD(PCR='PCR1', fragment='F3', var_min = 0.2):
+def control_LD(PCR='PCR1', fragment='F3', var_min=0.2):
     control_fn = (root_data_folder+'specific/PCR_recombination/'+
               'RNA_mix'+PCR+'_cocounts_'+fragment+'.pickle')
     def load_cocounts(PCR, fragment):
@@ -137,8 +145,7 @@ def plot_LD(data, fig_filename=None):
 
     for LD, label, measure in [(data['Dp'], "Linkage disequilibrium D'", 'Dp'),
                        (data['LDrsq'], 'Linkage disequilibrium r^2', 'rsq')]:
-        fig = plt.figure(figsize=fig_size)
-        ax = plt.subplot(111)
+        fig, ax = plt.subplots(1, 1, figsize=fig_size)
         for frag in all_fragments:
             y = LD[frag]
             plt.plot(binc, y, label=frag, lw=3)

@@ -102,7 +102,7 @@ if __name__=="__main__":
         # Check for cross-contamination
         tree = Phylo.read(fn_tree, 'newick')
 
-        # 2. annotate
+        # 1. annotate
         def fun_patient(node):
             return node.name.split('_')[1]
 
@@ -119,7 +119,7 @@ if __name__=="__main__":
 
         annotate_tree(tree.root, fun_patient, 'patient')
 
-        # 3. group by patient
+        # 2. group by patient
         from collections import defaultdict
         groups = defaultdict(list)
         for node in tree.get_terminals():
@@ -128,7 +128,7 @@ if __name__=="__main__":
                     node.color = map(lambda x:int(x*255), patient_colors[node.patient[0]])
                 groups[node.patient[0]].append(node)
 
-        # 4. check for monophyletic
+        # 3. check for monophyletic
         print region, 'non monophyletic:',
         non_mp = []
         for pcode, group in groups.iteritems():
@@ -136,7 +136,7 @@ if __name__=="__main__":
                 non_mp.append(pcode)
         print non_mp
 
-        # 5. plot the tree colored by patient
+        # 4. plot the tree colored by patient
         if params.plot:
             import matplotlib.pyplot as plt
             plt.ion()

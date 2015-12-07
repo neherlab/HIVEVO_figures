@@ -136,7 +136,7 @@ def collect_substitution_data(patients, regions, cov_min=100):
 
 def correlate_epitope_substitution(ds, dctl):
     '''Correlate presence of a substitution with epitope'''
-    from hivwholeseq.sequencing.primer_info import primers_coordinates_HXB2_outer
+    from hivwholeseq.data.primers import primers_coordinates_HXB2_outer
     start_F1 = primers_coordinates_HXB2_outer['F1'][0][1]
     end_F6 = primers_coordinates_HXB2_outer['F6'][1][0]
 
@@ -231,6 +231,7 @@ def plot_ctl_epitopes(data, ax=None, yoffset=0, colormap=None, fs=None):
 
         y = pnames.index(pcode) + yoffset
         for _, d in datum.iterrows():
+            continue
             ax.plot([d['start_HXB2'], d['end_HXB2']], [y] * 2, lw=2,
                    color=colormap(1.0 * y / len(pnames))
                    )
